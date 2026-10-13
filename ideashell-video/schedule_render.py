@@ -788,11 +788,20 @@ def logo_tile():
 
 # ---------------------------------------------------------------- frame
 # Xiaohongshu draws 9:16 videos under the status bar and back/share icons; keep content clear of the top band.
-SAFE_TOP = 200
+# Its side crop also eats ~70px per edge, so the whole layout is scaled down around the center.
+SAFE_TOP = 205
+SAFE_SCALE = 0.86
+
 
 def render(t):
     img = Image.new("RGBA", (W, H), PAPER + (255,))
-    draw_header(img, t)
+    head_a = 1 - prog(t, CAL_OUT, 0.3)
+    if head_a > 0:
+        head = Image.new("RGBA", (W, 130), (0, 0, 0, 0))
+        draw_header(head, t)
+        if head_a < 1:
+            head.putalpha(head.getchannel("A").point(lambda v: int(v * head_a)))
+        img.alpha_composite(head)
     draw_label(img, t)
     if t < CAL + 0.6:
         rd = RD1 if t < AGAIN else RD2
@@ -806,8 +815,10 @@ def render(t):
     if t >= TYPE3[0] - 0.2:
         draw_slogan(img, t)
         draw_end(img, t)
+    sw, sh = round(W * SAFE_SCALE), round(H * SAFE_SCALE)
     framed = Image.new("RGB", (W, H), PAPER)
-    framed.paste(img.convert("RGB").crop((0, 0, W, H - SAFE_TOP)), (0, SAFE_TOP))
+    framed.paste(img.convert("RGB").resize((sw, sh), Image.LANCZOS).crop((0, 0, sw, H - SAFE_TOP)),
+                 ((W - sw) // 2, SAFE_TOP))
     return framed
 
 
