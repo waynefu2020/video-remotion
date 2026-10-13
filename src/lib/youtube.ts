@@ -9,12 +9,6 @@ let session: Promise<import("youtubei.js").Innertube> | undefined;
 
 async function client() {
   const { Innertube } = await import("youtubei.js");
-  const specifier = "youtubei.js/dist/src/utils/Log.js";
-  const log = (await import(specifier)) as {
-    setLevel: (...levels: number[]) => void;
-    Level: { NONE: number };
-  };
-  log.setLevel(log.Level.NONE);
   session ??= Innertube.create({
     generate_session_locally: true,
     lang: "zh-CN",

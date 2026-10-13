@@ -9,7 +9,13 @@ export function analyzePost(post: ParsedPost): Analysis {
   const notes = buildNotes(post, hookKind);
   const when = formatRelative(post.publishedAt);
   const stat = leadStat(post);
-  const opening = hook ? `开头是「${clip(hook, 32)}」` : "没有留下正文";
+  const tags = post.hashtags.slice(0, 3).map((tag) => `#${tag}`).join(" ");
+  const opening =
+    hookKind === "只靠标签"
+      ? `正文只挂了话题${tags ? ` ${tags}` : ""}`
+      : hook
+        ? `开头是「${clip(hook, 32)}」`
+        : "没有留下正文";
   const summary = `${post.author.name} 在${PLATFORM_LABEL[post.platform]}发了一条${formLabel}${when ? `，${when}` : ""}，${opening}。${stat}`;
 
   return {
