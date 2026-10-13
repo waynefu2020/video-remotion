@@ -129,6 +129,20 @@ def mini_scaled(v, w):
     return base.resize((w, max(2, round(w * base.height / base.width))), Image.LANCZOS, reducing_gap=2.0)
 
 
+@lru_cache(2400)
+def wall_card(v, w, deg):
+    img = mini_scaled(v, w)
+    img = img.resize((img.width, max(2, int(img.height * 0.78))), Image.BICUBIC)
+    return img.rotate(deg, Image.BICUBIC, expand=True) if deg % 360 else img
+
+
+def wall_deg(th, amount=1.0):
+    d = (90 - math.degrees(th)) % 360
+    if d > 180:
+        d -= 360
+    return int(round(d * amount / 4)) * 4
+
+
 def cam_z(t):
     return 9200 * prog(t, FLIGHT_START, FLIGHT_END - FLIGHT_START) ** 2.3
 
@@ -137,7 +151,11 @@ def tunnel_proj(t):
     zr = T_Z - cam_z(t)
     th = T_TH + 1.2 * prog(t, FLIGHT_START, FLIGHT_END - FLIGHT_START) ** 2
     zs = np.maximum(zr, 1.0)
-    return CX + FOCAL * T_R * np.cos(th) / zs, CY + FOCAL * T_R * np.sin(th) / zs, CARD_WW * FOCAL / zs, zr
+    return CX + FOCAL * T_R * np.cos(th) / zs, CY + FOCAL * T_R * np.sin(th) / zs, CARD_WW * FOCAL / zs, zr, th
+
+
+RIB_Z = 600 + np.arange(24) * 480.0
+RIB_R = 1000
 
 
 Q_LINES = ["去年王总说的预算，", "是多少来着？"]
@@ -192,12 +210,20 @@ def fog(zr):
 
 
 def draw_tunnel(layer, t, alpha=1.0):
-    x, y, w, zr = tunnel_proj(t)
-    px, py, _, _ = tunnel_proj(t - 1 / FPS)
+    x, y, w, zr, th = tunnel_proj(t)
+    px, py, _, _, _ = tunnel_proj(t - 1 / FPS)
     speed = clamp((cam_z(t) - cam_z(t - 1 / FPS)) / 520)
     order = np.argsort(-zr)
     streaks = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     sd = ImageDraw.Draw(streaks)
+    for rz in RIB_Z - cam_z(t):
+        if rz < 120:
+            continue
+        r = FOCAL * RIB_R / rz
+        ra = alpha * fog(rz) * 0.55
+        if ra > 0.02 and r < 1600:
+            sd.ellipse((CX - r, CY - r, CX + r, CY + r), outline=(200, 190, 178, int(255 * ra)),
+                       width=max(1, int(r / 110)))
     for i in order:
         if zr[i] < 140 or w[i] < 5 or w[i] > 1100:
             continue
@@ -216,7 +242,7 @@ def draw_tunnel(layer, t, alpha=1.0):
         a = alpha * fog(zr[i])
         if a <= 0.02:
             continue
-        img = mini_scaled(int(T_V[i]), quant_w(w[i]))
+        img = wall_card(int(T_V[i]), quant_w(w[i]), wall_deg(th[i]))
         blit(layer, img if a > 0.98 else fade(img, a), x[i], y[i])
 
 
@@ -232,7 +258,7 @@ def draw_particles(layer, t):
     ue = out_cubic(prog(t, SHATTER, 0.45))
     ex, ey = px + vx * ue, py + vy * ue
     m = in_out(prog(t, MORPH_START, MORPH_END - MORPH_START))
-    tx, ty, tw, _ = tunnel_proj(FLIGHT_START)
+    tx, ty, tw, _, tth = tunnel_proj(FLIGHT_START)
     spark_a = 1 - prog(t, SHATTER + 0.1, 0.55)
     for i in range(N_T, len(px)):
         if spark_a > 0:
@@ -247,7 +273,7 @@ def draw_particles(layer, t):
             ww = lerp(10, tw[i], m)
             fa = clamp((m - 0.15) / 0.5) * fog(T_Z[i])
             if 5 <= ww <= 1100 and fa > 0.02:
-                blit(layer, fade(mini_scaled(int(T_V[i]), quant_w(ww)), fa), x, y)
+                blit(layer, fade(wall_card(int(T_V[i]), quant_w(ww), wall_deg(tth[i], m)), fa), x, y)
 
 
 def month_label(k):
@@ -726,7 +752,7 @@ def draw_accordion(layer, t, alpha):
     draw_bubble(layer, t, "合同里的违约条款怎么写的？", ACC_ASK)
     u = prog(t, RIFFLE_START, RIFFLE_END - RIFFLE_START)
     s = (TARGET_PAGE - 1) * (1 - (1 - u) ** 3.2)
-    enter = out_cubic(prog(t, ACC_START + 0.1, 0.4))
+    enter = out_cubic(prog(t, ACC_START - 0.25, 0.5))
     settle = prog(t, RIFFLE_END + 0.05, 0.25)
     pages = []
     for i in range(PAGE_COUNT):
@@ -858,12 +884,12 @@ def scene_files(layer, t):
     chapter(layer, t, CH2, "02", "上传的文件，", rich((("都能", INK), ("问", ORANGE)), 84, "Black"))
     if t < ACC_START:
         draw_absorb(layer, t, 1 - prog(t, ACC_START - 0.25, 0.25))
-    elif t < CMP_START:
+    if ACC_START - 0.25 <= t < CMP_START:
         sub = Image.new("RGBA", (W, H), (0, 0, 0, 0))
         draw_accordion(sub, t, 1.0)
         o = prog(t, CMP_START - 0.25, 0.25)
         put(layer, sub, 540, 960 - 120 * in_cubic(o), 1.0, 1 - o)
-    else:
+    if t >= CMP_START:
         draw_compare(layer, t, 1.0)
 
 
