@@ -787,6 +787,8 @@ def logo_tile():
 
 
 # ---------------------------------------------------------------- frame
+# Xiaohongshu draws 9:16 videos under the status bar and back/share icons; keep content clear of the top band.
+SAFE_TOP = 200
 
 def render(t):
     img = Image.new("RGBA", (W, H), PAPER + (255,))
@@ -804,7 +806,9 @@ def render(t):
     if t >= TYPE3[0] - 0.2:
         draw_slogan(img, t)
         draw_end(img, t)
-    return img.convert("RGB")
+    framed = Image.new("RGB", (W, H), PAPER)
+    framed.paste(img.convert("RGB").crop((0, 0, W, H - SAFE_TOP)), (0, SAFE_TOP))
+    return framed
 
 
 def render_frame(i):
