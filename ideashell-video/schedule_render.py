@@ -306,6 +306,24 @@ def round_flights(rd):
     return dest
 
 
+@lru_cache(4)
+def flight_delays(rid):
+    rd = RD1 if rid == 1 else RD2
+    out = {}
+    for k, card in enumerate(rd["cards"]):
+        base = 0.08 + 0.12 * k
+        for j, src in enumerate([src for _, src in card["title"] if src is not None]):
+            out[src] = base + 0.03 * j
+        for srcs in [srcs for _, _, srcs in card["tags"]]:
+            for j, src in enumerate(srcs):
+                out[src] = base + 0.1 + 0.01 * j
+    return out
+
+
+def flight_start(rd, src):
+    return rd["task"] + flight_delays(1 if rd is RD1 else 2)[src]
+
+
 def draw_round(layer, t, rd, typing_active=True):
     cells, marks, kept = rd["cells"], rd["marks"], rd["kept"]
     typ = rd["typ"]
@@ -363,7 +381,6 @@ def draw_round(layer, t, rd, typing_active=True):
 
     # kept glyphs: type in, reflow, then fly into cards
     dest = round_flights(rd)
-    order = {src: n for n, src in enumerate(sorted(dest))}
     for k, i in enumerate(kept):
         if t < typ[i]:
             continue
@@ -375,23 +392,22 @@ def draw_round(layer, t, rd, typing_active=True):
         pop = prog(t, typ[i], 0.1)
         sc = lerp(1.3, 1, out_cubic(pop))
         a = clamp(pop * 2)
+        d = dest.get(k)
+        if d is None:
+            p = prog(t, task - 0.3, 0.3)
+            put(layer, glyph(s, GLYPH), x, y + 40 * p, sc * (1 - 0.2 * p), a * (1 - p))
+            continue
         if t < task:
             put(layer, glyph(s, GLYPH), x, y, sc, a)
             continue
-        d = dest.get(k)
-        if d is None:
-            p = prog(t, task, 0.3)
-            put(layer, glyph(s, GLYPH), x, y + 40 * p, 1 - 0.2 * p, 1 - p)
-            continue
         kind, ci, j = d
-        f0 = task + 0.05 + order[k] * 0.022
-        p = in_out(prog(t, f0, 0.5))
+        p = in_out(prog(t, flight_start(rd, k), 0.45))
         if kind == "title":
             tx, ty = title_slots(rd["cards"][ci], ci)[j]
             target = text_width(s, TITLE_SIZE, "Black") / max(1.0, font("Black", glyph_size(s, GLYPH)).getlength(s))
             if p >= 1:
                 continue
-            put(layer, glyph(s, GLYPH), lerp(x, tx, p), lerp(y, ty, p) - 70 * math.sin(math.pi * p),
+            put(layer, glyph(s, GLYPH), lerp(x, tx, p), lerp(y, ty, p) - 40 * math.sin(math.pi * p),
                 lerp(1, target, p), 1.0)
         else:
             tx, ty = tag_slots(rd["cards"][ci], ci)[j]
@@ -440,8 +456,7 @@ def draw_cards(layer, t, rd):
                 pa = prog(t, dest_title_land + 0.05, 0.25)
                 put(sub, glyph(g, TITLE_SIZE, fit=False), tx, ty, lerp(0.4, 1, out_back(pa)), clamp(pa * 3))
             else:
-                order = sorted(round_flights(rd)).index(src)
-                if prog(t, rd["task"] + 0.05 + order * 0.022, 0.5) >= 1:
+                if prog(t, flight_start(rd, src), 0.45) >= 1:
                     put(sub, glyph(g, TITLE_SIZE, fit=False), tx, ty)
         for j, ((kind, text, _), (tx, ty)) in enumerate(zip(card["tags"], tag_slots(card, k))):
             pa = prog(t, rd["tags_t"] + 0.12 * k + 0.06 * j, 0.32)
@@ -631,8 +646,10 @@ def draw_calendar(layer, t):
         e = in_out(p)
         if p < 1:
             cx, cy = lerp(bx, tx, e), lerp(by, ty, e) - 120 * math.sin(math.pi * e)
-            put(sub, pill_img(PILLS[n]), cx, cy, lerp(1, 0.6, e), 1 - e)
-            put(sub, block_img(b), cx, cy, lerp(0.5, 1, e), e)
+            sw = clamp(e * 4 - 0.4)
+            if sw < 1:
+                put(sub, pill_img(PILLS[n]), cx, cy, lerp(1, 0.6, e), 1 - sw)
+            put(sub, block_img(b), cx, cy, lerp(0.5, 1, e), sw)
         else:
             land = prog(t, LAND[b] + FLY_DUR, 0.3)
             put(sub, block_img(b), tx, ty, 1 + 0.12 * math.sin(math.pi * land))
