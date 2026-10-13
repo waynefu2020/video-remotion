@@ -83,16 +83,15 @@ function authorUrl(platform: Platform, handle?: string): string | undefined {
 
 export function extractXiaohongshuNote(payload: unknown): Record<string, unknown> | null {
   const data = asRecord(asRecord(payload)?.data) ?? asRecord(payload);
-  const buckets = [
-    ...asArray(data?.data),
-    ...asArray(data?.note_list).map((note) => ({ note_list: [note] })),
-  ];
-  for (const bucket of buckets) {
-    const record = asRecord(bucket);
-    const note = asRecord(asArray(record?.note_list)[0]);
-    if (note) return note;
+  const items = [...asArray(data?.data), ...asArray(data?.note_list)];
+  for (const item of items) {
+    const record = asRecord(item);
+    if (!record) continue;
+    const nested = asRecord(asArray(record.note_list)[0]);
+    if (nested) return nested;
+    if (record.id && (record.title || record.desc || record.type || record.text)) return record;
   }
-  if (data && (data.title || data.desc || data.text || data.id)) return data;
+  if (data && (data.title || data.desc || data.text) && data.id) return data;
   return null;
 }
 
@@ -114,7 +113,9 @@ export function normalizeXiaohongshu(payload: unknown, pageUrl: string): ParsedP
     throw new ParseError("这条小红书笔记不存在、已删除，或分享口令失效了。");
   }
 
-  const caption = [textOf(note.title), textOf(note.desc) ?? textOf(note.text)].filter(Boolean).join("\n");
+  const title = textOf(note.title);
+  const body = textOf(note.desc) ?? textOf(note.text) ?? "";
+  const caption = title && body.startsWith(title) ? body : [title, body].filter(Boolean).join("\n");
   const user = asRecord(note.user) ?? asRecord(note.user_info) ?? {};
   const likes = numberOf(note.liked_count) ?? numberOf(note.likes) ?? 0;
   const images = [...asArray(note.images_list), ...asArray(note.image_list)];
@@ -160,17 +161,25 @@ export function normalizeXiaohongshu(payload: unknown, pageUrl: string): ParsedP
   };
 }
 
-function xhsVideoUrl(note: Record<string, unknown>): string | undefined {
+function xhsStream(note: Record<string, unknown>): Record<string, unknown> | null {
   const video = asRecord(note.video) ?? asRecord(note.video_info);
-  if (!video) return undefined;
-  const stream = asRecord(asRecord(video.media)?.stream);
+  const fromVideo = asRecord(asRecord(video?.media)?.stream);
+  const fromV2 = asRecord(asRecord(asRecord(note.video_info_v2)?.media)?.stream);
+  return fromVideo ?? fromV2;
+}
+
+function xhsVideoUrl(note: Record<string, unknown>): string | undefined {
+  const stream = xhsStream(note);
   const h264 = asArray(stream?.h264)[0] ?? asArray(stream?.h265)[0];
-  return firstUrl(h264) ?? firstUrl(video.url) ?? firstUrl(video.play_addr) ?? firstUrl(video);
+  const direct = asRecord(note.video) ?? asRecord(note.video_info);
+  return firstUrl(h264) ?? (direct ? firstUrl(direct.url) ?? firstUrl(direct.play_addr) ?? firstUrl(direct) : undefined);
 }
 
 function xhsDuration(note: Record<string, unknown>): number | undefined {
+  const stream = xhsStream(note);
+  const track = asRecord(asArray(stream?.h264)[0]) ?? asRecord(asArray(stream?.h265)[0]);
   const video = asRecord(note.video) ?? {};
-  const raw = numberOf(video.duration) ?? numberOf(note.duration);
+  const raw = numberOf(track?.duration) ?? numberOf(video.duration) ?? numberOf(note.duration);
   if (!raw || raw <= 0) return undefined;
   return raw > 1000 ? raw : raw * 1000;
 }

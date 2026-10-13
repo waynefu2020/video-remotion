@@ -54,13 +54,14 @@ export function unixToIso(value: unknown): string | undefined {
 
 export function hashtagsFrom(text: string, extra: unknown[] = []): string[] {
   const found = new Set<string>();
+  const add = (name: string | undefined) => {
+    const clean = name?.replace(/^#/, "").replace(/\[话题\]/g, "").trim();
+    if (clean) found.add(clean);
+  };
   for (const item of extra) {
-    const name = textOf(asRecord(item)?.hashtag_name) ?? textOf(asRecord(item)?.name);
-    if (name) found.add(name.replace(/^#/, ""));
+    add(textOf(asRecord(item)?.hashtag_name) ?? textOf(asRecord(item)?.name));
   }
-  for (const match of text.matchAll(/#([^\s#@]+)/g)) {
-    found.add(match[1]);
-  }
+  for (const match of text.matchAll(/#([^\s#]+)/g)) add(match[1]);
   return [...found];
 }
 
