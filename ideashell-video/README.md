@@ -58,3 +58,28 @@ pip install pillow numpy
 - 时间轴：`memory_timeline.py`（画面和音效共用）
 - 画面：`memory_render.py`（复用 `render.py` 的绘图工具），静帧检查：`python3 memory_render.py --stills 2.6 9.8 26`
 - 配乐和音效：`memory_audio.py`（复用 `audio.py` 的乐器和音效）
+
+---
+
+# 闪念贝壳 28 秒「说话乱七八糟，日程井井有条」竖屏片
+
+参考 TimeMind 的稿纸方格风格：一个字一格逐字打出，口头禅和改口标红后被吹走，剩下的字补位，再飞进待办卡。1080×1920、30 fps、无人声，成片在 `dist/ideashell-schedule.mp4`。
+
+## 分镜
+
+| 时间 | 段落 | 内容 |
+| --- | --- | --- |
+| 0–8s | 第一段 | 「嗯，那个，明早九点，啊不是，十点跟老板过方案，然后那个，PPT今晚得改完。」→ 标出 3 处口头禅、1 处改口 → 吹走补位 → 两张待办：跟老板过方案（明天 10:00，提前 15 分钟提醒）、改 PPT（今晚 22:00 前） |
+| 8–15.9s | 再说一段 | 更长更乱的一段，7 处标红连击 → 4 张待办：妈妈生日、订蛋糕、游泳（每周二、四 19:30，每周重复）、交房租 |
+| 15.9–20.2s | 稿纸变日程表 | 6 项待办缩成标签，方格变形成本周日历，待办按日期和时间落位 →「说得再乱，日程也井井有条。」 |
+| 20.2–28s | 口号与落版 | 「呃，就，帮你记，帮你做」吹走口头禅，「帮你做」亮橙 → logo、闪念贝壳、任何设备随时同步、iPhone / Android / Mac / Windows / Apple Watch、应用商店搜「闪念贝壳」 |
+
+## 重新生成
+
+```bash
+./build_schedule.sh
+```
+
+- 时间轴和文案切分：`schedule_timeline.py`（画面和音效共用）
+- 画面：`schedule_render.py`，静帧检查：`python3 schedule_render.py --stills 3.9 19 26`
+- 配乐和音效：`schedule_audio.py`
