@@ -485,12 +485,14 @@ def scene_capture(layer, t):
     working = prog(t, ZAP_START, 0.15)
     done = prog(t, CAPTURE_NOTE, 0.3)
     blink = 0.55 + 0.45 * abs(math.sin(t * 5))
-    card.add(circle(18, RED + (255,)), 50, 52, 0, 0.5, blink * (1 - working))
-    card.add(txt("正在听…", 32, "Medium", GRAY), 80, 52, 0, 0.5, 1 - working)
-    card.add(sparkle(30, ORANGE + (255,)), 50, 52, 0, 0.5, working * (1 - done))
-    card.add(txt("正在整理…", 32, "Bold", ORANGE), 92, 52, 0, 0.5, working * (1 - done))
-    card.add(check_badge(34), 50, 52, 0, 0.5, done, lerp(0.5, 1, out_back(done)))
-    card.add(txt("整理好了，已存成笔记", 32, "Bold", ORANGE), 96, 52, 0, 0.5, done)
+    w_out, w_in = 1 - clamp(working * 2), clamp(working * 2 - 1)
+    d_out, d_in = 1 - clamp(done * 2), clamp(done * 2 - 1)
+    card.add(circle(18, RED + (255,)), 50, 52, 0, 0.5, blink * w_out)
+    card.add(txt("正在听…", 32, "Medium", GRAY), 80, 52, 0, 0.5, w_out)
+    card.add(sparkle(30, ORANGE + (255,)), 50, 52, 0, 0.5, w_in * d_out)
+    card.add(txt("正在整理…", 32, "Bold", ORANGE), 92, 52, 0, 0.5, w_in * d_out)
+    card.add(check_badge(34), 50, 52, 0, 0.5, d_in, lerp(0.5, 1, out_back(d_in)))
+    card.add(txt("整理好了，已存成笔记", 32, "Bold", ORANGE), 96, 52, 0, 0.5, d_in)
 
     events = CAPTURE_ZAPS + [CAPTURE_CORRECT]
     n = sum(t >= e for e in events)
@@ -503,7 +505,7 @@ def scene_capture(layer, t):
                  lerp(0.6, 1, out_back(pk)))
 
     if pn > 0:
-        card.add(txt("和 Allen 的会前准备", 48, "Black"), 50, CAP_PAD + 30 + 20 * (1 - pn), 0, 0.5, pn)
+        card.add(txt("和 Allen 的会前准备", 48, "Black"), 50, oy - 50, 0, 0.5, clamp((pn - 0.45) / 0.55))
         ty = oy + text_h + 40
         for j, tag in enumerate(["#会议", "#Allen"]):
             pt = out_back(prog(t, CAPTURE_NOTE + 0.1 + j * 0.1, 0.35))
@@ -597,7 +599,10 @@ def wall_crop(which, scale):
     src = walls()[which]
     cw, ch = VIEW_W / scale, VIEW_H / scale
     box = (round(WALL_W / 2 - cw / 2), round(WALL_H / 2 - ch / 2), round(WALL_W / 2 + cw / 2), round(WALL_H / 2 + ch / 2))
-    return src.crop(box).resize((VIEW_W, VIEW_H), Image.BILINEAR if scale > 0.5 else Image.BOX)
+    crop = src.crop(box)
+    if scale >= 1:
+        return crop.resize((VIEW_W, VIEW_H), Image.BICUBIC)
+    return crop.resize((VIEW_W, VIEW_H), Image.LANCZOS, reducing_gap=2.0)
 
 
 def wall_scale(t):
