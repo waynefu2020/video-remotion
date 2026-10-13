@@ -5,7 +5,7 @@ import wave
 
 import numpy as np
 
-from timeline import BPM, DURATION, SCAN_LEN, SCENES, VOICE_AT, VOICE_END, WALL_IN, WALL_PICKS, scene_start, sfx_events
+from timeline import BPM, DURATION, SCAN_LEN, SCENES, WALL_IN, WALL_PICKS, scene_start, sfx_events
 
 SR = 48000
 N = int(SR * DURATION)
@@ -141,19 +141,6 @@ def bell(freqs, dur=1.2, decay=0.45):
 def mixs(*parts):
     n = max(len(p) for p in parts)
     return sum(np.pad(p, (0, n - len(p))) for p in parts)
-
-
-def load_voice():
-    path = os.path.join(os.path.dirname(OUT), "..", "assets", "voice", "capture.wav")
-    with wave.open(path) as w:
-        sr = w.getframerate()
-        x = np.frombuffer(w.readframes(w.getnframes()), dtype="<i2").astype(float) / 32768
-        if w.getnchannels() == 2:
-            x = x.reshape(-1, 2).mean(axis=1)
-    n = int(len(x) * SR / sr)
-    x = np.interp(np.arange(n) * sr / SR, np.arange(len(x)), x)
-    x = fft_filter(x, lo=110)
-    return x / (np.max(np.abs(x)) + 1e-9)
 
 
 def flutter(dur):
@@ -309,13 +296,6 @@ def build_music():
     add(music, bass(hz(end_root - 24), 2.5), outro_start, 0.35)
 
     music *= duck
-    talk = np.ones(N)
-    a, b = int((VOICE_AT - 0.1) * SR), int((VOICE_END + 0.15) * SR)
-    ramp = int(0.15 * SR)
-    talk[a:b] = 0.32
-    talk[a - ramp:a] = np.linspace(1, 0.32, ramp)
-    talk[b:b + ramp] = np.linspace(0.32, 1, ramp)
-    music *= talk
     riser = whoosh(1.0, 300, 7000, rising=True) * 0.12
     add(music, riser, scene_start("meeting") - 1.0)
     return music + drums
@@ -342,9 +322,7 @@ def main():
         sig, pan = make_sfx(kind)
         add(sfx, sig, t, 1.0, pan)
 
-    voice = np.zeros((2, N))
-    add(voice, load_voice(), VOICE_AT, 1.9)
-    mix = reverb(music * 0.85, mix=0.22) + reverb(sfx, seconds=0.9, mix=0.12) + reverb(voice, seconds=0.6, mix=0.05)
+    mix = reverb(music * 0.85, mix=0.22) + reverb(sfx, seconds=0.9, mix=0.12)
     fade = np.ones(N)
     tail = int(1.2 * SR)
     fade[-tail:] = np.linspace(1, 0, tail) ** 1.5
