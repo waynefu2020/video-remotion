@@ -658,7 +658,7 @@ def scene_outro(layer, t):
     a, s, dy = appear(t, OUTRO_WORD)
     put(layer, txt("闪念贝壳", 132, "Black"), 540, 960 + dy, s, a)
     a, s, dy = appear(t, OUTRO_SLOGAN)
-    put(layer, rich((("帮你", INK), ("记", ORANGE), ("，陪你", INK), ("想", ORANGE), ("。", INK)), 92, "Black"),
+    put(layer, rich((("帮你", INK), ("记", ORANGE), ("，一起", INK), ("想", ORANGE), ("。", INK)), 92, "Black"),
         540, 1165 + dy, s, a)
     a, s, dy = appear(t, OUTRO_SLOGAN + 0.25)
     put(layer, txt("让每一个被记下的想法，都有下一步", 42, "Medium", GRAY), 540, 1305 + dy, s, a)
