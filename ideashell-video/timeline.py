@@ -55,8 +55,6 @@ TODO_SUMMARY = 23.35
 OUTRO_LOGO = 25.25
 OUTRO_WORD = 25.75
 OUTRO_SLOGAN = 26.25
-OUTRO_DEVICES = 27.0
-OUTRO_CTA = 27.7
 
 
 def sfx_events():
@@ -84,5 +82,4 @@ def sfx_events():
     ev.append((TODO_SUMMARY, "chime"))
     ev.append((OUTRO_LOGO, "impact"))
     ev.append((OUTRO_SLOGAN, "sparkle"))
-    ev.append((OUTRO_CTA, "pop"))
     return sorted(ev)

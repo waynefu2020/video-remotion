@@ -293,7 +293,7 @@ def stage_pill(label, active):
     return img
 
 
-def stepper(layer, t, t0, ji_on, xiang_on, y=480):
+def stepper(layer, t, t0, ji_on, xiang_on, y=462):
     a, s, dy = appear(t, t0 + 0.18)
     pills = [("记 · 录下来", ji_on), ("想 · 一起想", xiang_on)]
     xs = [540 - 175, 540 + 175]
@@ -315,9 +315,9 @@ def header(layer, t, t0, num, name, title, ji_on, xiang_on):
     w = int(text_width(chip_label, 34)) + 56
     chip = rrect(w, 64, 32, ORANGE_SOFT + (255,)).copy()
     put(chip, txt(chip_label, 34, "Bold", ORANGE), w / 2, 32)
-    put(layer, chip, 540, 232 + dy, s, a)
+    put(layer, chip, 540, 190 + dy, s, a)
     a2, s2, dy2 = appear(t, t0 + 0.1)
-    put(layer, rich(title, 84, "Black"), 540, 350 + dy2, s2, a2)
+    put(layer, rich(title, 84, "Black"), 540, 318 + dy2, s2, a2)
     stepper(layer, t, t0, ji_on, xiang_on)
 
 
@@ -382,14 +382,14 @@ def scene_capture(layer, t):
     put(layer, txt("手表、手机、电脑，开口就能记", 44, "Medium", GRAY), 540, 392 + dy, s, a)
 
     wa, ws, wdy = appear(t, t0 + 0.2, dur=0.55, rise=120, from_scale=0.8)
-    cx, cy = 540, 900
+    cx, cy = 540, 860
     if wa > 0:
         for k in range(3):
             phase = ((t - t0) / 1.5 + k / 3) % 1.0
-            r = int(lerp(190, 470, phase)) // 4 * 4
+            r = int(lerp(180, 400, phase)) // 4 * 4
             put(layer, ring(r, 4, ORANGE + (255,)), cx - 6, cy + 8 + wdy, 1.0, wa * 0.55 * (1 - phase) ** 1.5)
         breathe = 1 + 0.008 * math.sin((t - t0) * 6)
-        put(layer, asset_shadowed("watch-zh", 800), cx, cy + wdy, ws * breathe, wa)
+        put(layer, asset_shadowed("watch-zh", 720), cx, cy + wdy, ws * breathe, wa)
 
     ca, cs, cdy = appear(t, CAPTURE_TYPE_START - 0.35, rise=60)
     if ca <= 0:
@@ -445,7 +445,7 @@ def scene_capture(layer, t):
     card.add(check_badge(34), 50, 58, 0, 0.5, pd, lerp(0.5, 1, out_back(pd)))
     card.add(txt("口头禅已去掉，整理好了", 32, "Bold", ORANGE), 96, 58, 0, 0.5, pd)
     bump = 1 + 0.035 * math.sin(math.pi * prog(t, CAPTURE_DONE, 0.3))
-    put(layer, card.img, 540, 1470 + cdy, cs * bump, ca)
+    put(layer, card.img, 540, 1440 + cdy, cs * bump, ca)
 
 
 def scene_bridge(layer, t):
@@ -468,7 +468,7 @@ def scene_meeting(layer, t):
     header(layer, t, t0, "01", "会议", (("开会前，", INK), ("帮你备好功课", ORANGE)), MEETING_ASK, MEETING_STEPS[0])
 
     pa = out_cubic(prog(t, t0 + 0.15, 0.6))
-    veil = 0.55 * prog(t, MEETING_STEPS[0] - 0.5, 0.4)
+    veil = prog(t, MEETING_STEPS[0] - 0.5, 0.4)
     phone = asset_shadowed("phone-zh", 1120)
     put(layer, phone, 540, lerp(1500, 1230, pa), 1.0, pa * (1 - veil))
 
@@ -480,11 +480,11 @@ def scene_meeting(layer, t):
         img, pad = bubble[0].copy(), bubble[1]
         put(img, mic_icon(44, WHITE), pad + 58, pad + 56)
         put(img, txt(label, 42, "Bold", WHITE), pad + 92, pad + 56, ax=0)
-        put(layer, img, 540, 630 + dy, s, a)
+        put(layer, img, 540, 616 + dy, s, a)
 
     ca, cs, cdy = appear(t, MEETING_STEPS[0] - 0.55, rise=70)
     if ca > 0:
-        card = Card(940, 470)
+        card = Card(940, 450)
         done_all = prog(t, MEETING_STEPS[-1] + 0.1, 0.2)
         card.add(sparkle(40, ORANGE + (255,)), 52, 62, 0, 0.5)
         card.add(txt("闪念贝壳正在想…", 40, "Bold"), 108, 62, 0, 0.5, 1 - done_all)
@@ -505,7 +505,7 @@ def scene_meeting(layer, t):
             card.add(check_badge(52), 78, y + 44, 0.5, 0.5, done, lerp(0.4, 1, out_back(done)))
             card.add(txt(title, 40, "Bold", INK), 130, y + 22, 0, 0.5, ra)
             card.add(txt(detail, 32, "Regular", GRAY), 130, y + 70, 0, 0.5, ra)
-        put(layer, card.img, 540, 950 + cdy, cs, ca)
+        put(layer, card.img, 540, 941 + cdy, cs, ca)
 
     ra, rs, rdy = appear(t, MEETING_RESULT, rise=70)
     if ra > 0:
@@ -522,7 +522,7 @@ def scene_meeting(layer, t):
             y = 140 + i * 60
             card.add(circle(14, ORANGE + (255,)), 58, y, 0.5, 0.5, ia)
             card.add(rich(((k + "   ", GRAY), (v, INK)), 36, "Medium"), 84, y, 0, 0.5, ia)
-        put(layer, card.img, 540, 1385 + rdy, rs, ra)
+        put(layer, card.img, 540, 1370 + rdy, rs, ra)
 
 
 def scene_client(layer, t):
@@ -530,7 +530,7 @@ def scene_client(layer, t):
     header(layer, t, t0, "02", "客户对话", (("聊完客户，", INK), ("帮你找到机会", ORANGE)), CLIENT_CARD, CLIENT_HIGHLIGHT)
 
     pa = out_cubic(prog(t, t0 + 0.15, 0.6))
-    put(layer, asset("mac-zh", width=1010), lerp(1300, 540, pa), 800, 1.0, pa)
+    put(layer, asset("mac-zh", width=680), lerp(1300, 540, pa), 763, 1.0, pa)
 
     ca, cs, cdy = appear(t, CLIENT_CARD, rise=70)
     if ca > 0:
@@ -545,7 +545,7 @@ def scene_client(layer, t):
             (("", INK), ("反复整理各个渠道的数据。", INK)),
         ]
         for i, segs in enumerate(lines):
-            y = 168 + i * 58
+            y = 172 + i * 56
             img = rich(segs, 38, "Medium")
             x = 50 if i == 0 else 50 + text_width("王总：", 38, "Medium")
             if i >= 1:
@@ -556,7 +556,7 @@ def scene_client(layer, t):
                         (x0, pad + y - 24, x0 + (img.width + 8) * hp, pad + y + 26), 8, fill=(255, 210, 186, 255)
                     )
             card.add(img, x, y, 0, 0.5)
-        put(layer, card.img, 540, 1090 + cdy, cs, ca)
+        put(layer, card.img, 540, 1177 + cdy, cs, ca)
 
     ia, is_, idy = appear(t, CLIENT_INSIGHT, rise=80, from_scale=0.6)
     if ia > 0:
@@ -567,7 +567,7 @@ def scene_client(layer, t):
         card.add(txt("而是反复整理数据。", 46, "Black", WHITE), 50, 192, 0, 0.5)
         fa = prog(t, CLIENT_INSIGHT + 0.35, 0.3)
         card.add(txt("下一步：带一份「自动周报」方案去跟进", 32, "Medium", (255, 226, 210)), 50, 254, 0, 0.5, fa)
-        put(layer, card.img, 540, 1425 + idy, is_, ia)
+        put(layer, card.img, 540, 1540 + idy, is_, ia)
 
 
 TODO_TEXT = "周五前把报价发给王总，下周一约个设计评审，对了，记得回 Allen 的邮件"
@@ -583,8 +583,8 @@ def scene_todo(layer, t):
         for k in range(2):
             phase = ((t - t0) / 1.4 + k / 2) % 1.0
             r = int(lerp(100, 260, phase)) // 4 * 4
-            put(layer, ring(r, 3, ORANGE + (255,)), 537, 768 + wdy, 1.0, wa * 0.5 * (1 - phase) ** 1.5)
-        put(layer, asset_shadowed("watch-zh", 400), 540, 765 + wdy, ws, wa)
+            put(layer, ring(r, 3, ORANGE + (255,)), 537, 763 + wdy, 1.0, wa * 0.5 * (1 - phase) ** 1.5)
+        put(layer, asset_shadowed("watch-zh", 400), 540, 760 + wdy, ws, wa)
 
     split = prog(t, TODO_SPLIT - 0.05, 0.25)
     ba, bs, bdy = appear(t, TODO_SPEAK - 0.3, rise=60)
@@ -606,7 +606,7 @@ def scene_todo(layer, t):
             n -= len(line)
             if shown:
                 card.add(txt(shown, 42, "Medium", WHITE), 50, 132 + i * 64, 0, 0.5)
-        put(layer, card.img, 540, 1125 + bdy, bs * (1 - 0.15 * split), ba * (1 - split))
+        put(layer, card.img, 540, 1133 + bdy, bs * (1 - 0.15 * split), ba * (1 - split))
 
     arrived = 0
     for i, (title, due) in enumerate(TODOS):
@@ -622,7 +622,7 @@ def scene_todo(layer, t):
         chip = rrect(dw, 56, 28, ORANGE_SOFT + (255,)).copy()
         put(chip, txt(due, 32, "Bold", ORANGE), dw / 2, 28)
         card.add(chip, 890, 64, 1, 0.5)
-        y = lerp(1125, 1015 + i * 152, out_cubic(p))
+        y = lerp(1133, 1074 + i * 156, out_cubic(p))
         put(layer, card.img, 540, y, lerp(0.5, 1, out_back(p)), clamp(p * 2))
 
     sa, ss, sdy = appear(t, TODO_SPLIT + 0.1, rise=30)
@@ -632,54 +632,36 @@ def scene_todo(layer, t):
         w = int(text_width(label, 38)) + 72
         pill = rrect(w, 88, 44, WHITE + (255,), LINE + (255,), 2).copy()
         put(pill, txt(label, 38, "Bold", GRAY), w / 2, 44)
-        put(layer, pill, 540, 1500 + sdy, ss, sa * (1 - done))
+        put(layer, pill, 540, 1538 + sdy, ss, sa * (1 - done))
         final = "3 项待办已创建，到点提醒你"
         w = int(text_width(final, 38)) + 140
         pill = rrect(w, 88, 44, ORANGE + (255,)).copy()
         put(pill, check_badge(44, WHITE, ORANGE), 58, 44)
         put(pill, txt(final, 38, "Bold", WHITE), 96, 44, ax=0)
         bump = 1 + 0.08 * math.sin(math.pi * done)
-        put(layer, pill, 540, 1500 + sdy, ss * bump, sa * done)
+        put(layer, pill, 540, 1538 + sdy, ss * bump, sa * done)
 
 
 def scene_outro(layer, t):
+    ly = 650
     p = prog(t, OUTRO_LOGO, 0.6)
     if p > 0:
-        put(layer, glow(900, ORANGE, 0.35), 540, 580, lerp(0.5, 1.0, out_cubic(p)), out_cubic(p))
-        put(layer, asset("logo", height=300), 540, 580, out_back(p, 1.6), clamp(p * 2.5), rotate=lerp(-40, 0, out_cubic(p)))
+        put(layer, glow(900, ORANGE, 0.35), 540, ly, lerp(0.5, 1.0, out_cubic(p)), out_cubic(p))
+        put(layer, asset("logo", height=300), 540, ly, out_back(p, 1.6), clamp(p * 2.5), rotate=lerp(-40, 0, out_cubic(p)))
         for k in range(8):
             ang = k * math.pi / 4 + 0.3
             bp = prog(t, OUTRO_LOGO + 0.1, 0.8)
             r = lerp(150, 330, out_cubic(bp))
-            put(layer, sparkle(34 if k % 2 else 24, ORANGE + (255,)), 540 + r * math.cos(ang), 580 + r * math.sin(ang),
+            put(layer, sparkle(34 if k % 2 else 24, ORANGE + (255,)), 540 + r * math.cos(ang), ly + r * math.sin(ang),
                 1.0, (1 - bp) * clamp(bp * 6))
 
     a, s, dy = appear(t, OUTRO_WORD)
-    put(layer, txt("闪念贝壳", 132, "Black"), 540, 830 + dy, s, a)
+    put(layer, txt("闪念贝壳", 132, "Black"), 540, 960 + dy, s, a)
     a, s, dy = appear(t, OUTRO_SLOGAN)
     put(layer, rich((("帮你", INK), ("记", ORANGE), ("，陪你", INK), ("想", ORANGE), ("。", INK)), 92, "Black"),
-        540, 985 + dy, s, a)
-    a, s, dy = appear(t, OUTRO_SLOGAN + 0.2)
-    put(layer, txt("让每一个被记下的想法，都有下一步", 42, "Medium", GRAY), 540, 1090 + dy, s, a)
-
-    devices = [("watch-zh", 250, 201), ("mac-zh", 270, 564), ("phone-zh", 330, 905)]
-    for i, (name, h, x) in enumerate(devices):
-        p = prog(t, OUTRO_DEVICES + i * 0.12, 0.5)
-        if p > 0:
-            img = asset(name, height=h)
-            put(layer, img, x, 1440 + 90 * (1 - out_cubic(p)), 1.0, clamp(p * 2), ay=1.0)
-    a, s, dy = appear(t, OUTRO_DEVICES + 0.4)
-    put(layer, txt("手表 · 手机 · 电脑，随时记，随时想", 36, "Medium", GRAY), 540, 1495 + dy, s, a)
-
-    a, s, dy = appear(t, OUTRO_CTA)
-    if a > 0:
-        label = "ideashell.cn  立即体验"
-        w = int(text_width(label, 44)) + 120
-        pill, pad = with_shadow(rrect(w, 108, 54, ORANGE + (255,)), color=(200, 60, 0), opacity=0.35)
-        pill = pill.copy()
-        put(pill, txt(label, 44, "Bold", WHITE), pad + w / 2, pad + 54)
-        pulse = 1 + 0.025 * math.sin(max(0, t - OUTRO_CTA - 0.5) * 5)
-        put(layer, pill, 540, 1610 + dy, s * pulse, a)
+        540, 1165 + dy, s, a)
+    a, s, dy = appear(t, OUTRO_SLOGAN + 0.25)
+    put(layer, txt("让每一个被记下的想法，都有下一步", 42, "Medium", GRAY), 540, 1305 + dy, s, a)
 
 
 SCENE_FN = {
