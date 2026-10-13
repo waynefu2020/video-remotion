@@ -5,7 +5,7 @@ import wave
 
 import numpy as np
 
-from timeline import BPM, DURATION, SCENES, sfx_events
+from timeline import BPM, DURATION, SCAN_LEN, SCENES, VOICE_AT, VOICE_END, WALL_IN, WALL_PICKS, scene_start, sfx_events
 
 SR = 48000
 N = int(SR * DURATION)
@@ -143,7 +143,58 @@ def mixs(*parts):
     return sum(np.pad(p, (0, n - len(p))) for p in parts)
 
 
+def load_voice():
+    path = os.path.join(os.path.dirname(OUT), "..", "assets", "voice", "capture.wav")
+    with wave.open(path) as w:
+        sr = w.getframerate()
+        x = np.frombuffer(w.readframes(w.getnframes()), dtype="<i2").astype(float) / 32768
+        if w.getnchannels() == 2:
+            x = x.reshape(-1, 2).mean(axis=1)
+    n = int(len(x) * SR / sr)
+    x = np.interp(np.arange(n) * sr / SR, np.arange(len(x)), x)
+    x = fft_filter(x, lo=110)
+    return x / (np.max(np.abs(x)) + 1e-9)
+
+
+def flutter(dur):
+    out = np.zeros(int(dur * SR) + SR // 10)
+    t = 0.0
+    k = 0
+    while t < dur:
+        click = np.diff(rng.normal(size=int(0.012 * SR)), prepend=0) * env(0.012, 0.0005, 0.003)
+        tone = sweep_tone(1800 + 900 * (t / dur) + rng.uniform(-200, 200), 2400, 0.02, 0.005) * 0.4
+        sig = mixs(click, tone) * (0.5 + 0.5 * t / dur)
+        i = int(t * SR)
+        out[i:i + len(sig)] += sig
+        t += lerp_gap(t / dur)
+        k += 1
+    return out
+
+
+def lerp_gap(x):
+    return 0.07 * (1 - x) + 0.018 * x
+
+
 def make_sfx(kind):
+    if kind.startswith("zap"):
+        i = int(kind[3:])
+        f = 640 * 1.26 ** i
+        pff = fft_filter(rng.normal(size=int(0.08 * SR)), lo=2000, hi=9000) * env(0.08, 0.001, 0.02)
+        return mixs(sweep_tone(f, f * 2.1, 0.16, 0.05) * 0.55, pff * 0.25), (-0.25 + 0.25 * i)
+    if kind.startswith("ping"):
+        i = int(kind[4:])
+        return bell([hz([86, 90, 93, 98][i])], 0.7, 0.22) * 0.55, (-0.4 + 0.27 * i)
+    if kind == "snap":
+        t = tt(0.3)
+        thump = np.sin(2 * np.pi * np.cumsum(60 + 140 * np.exp(-t / 0.03)) / SR) * env(0.3, 0.002, 0.09)
+        click = np.diff(rng.normal(size=int(0.02 * SR)), prepend=0) * env(0.02, 0.0005, 0.004)
+        return mixs(thump * 0.8, click * 0.6), 0.0
+    if kind == "drop":
+        t = tt(0.9)
+        sub = np.sin(2 * np.pi * np.cumsum(38 + 60 * np.exp(-t / 0.15)) / SR) * env(0.9, 0.01, 0.35)
+        return mixs(whoosh(0.6, 2500, 300) * 0.25, sub * 0.6), 0.0
+    if kind == "flutter":
+        return flutter(SCAN_LEN) * 0.45, 0.0
     if kind == "pop":
         return sweep_tone(520, 1050, 0.14, 0.05) * 0.6, 0.0
     if kind == "pop_hi":
@@ -227,11 +278,11 @@ def build_music():
             seq = [0, 1, 2, 1, 2, 3, 2, 1]
             octave = [notes[0] + 12, notes[1] + 12, notes[2] + 12, notes[0] + 24]
             m = octave[seq[step] % 4]
-            gain = 0.17 if sec == "hook" else 0.17
-            if sec == "bridge":
-                gain = 0.08
+            gain = 0.17
+            if WALL_IN <= t < WALL_PICKS[0]:
+                gain = 0.07
             add(music, pluck(hz(m), 0.5), t, gain, pan=0.35 if step % 2 else -0.35)
-            if sec not in ("hook", "bridge"):
+            if sec != "hook" and not (WALL_IN <= t < WALL_PICKS[0]):
                 add(music, bass(hz(root - 24), BEAT / 2), t, 0.32 if step % 2 == 0 else 0.18)
 
         for beat in range(4):
@@ -239,7 +290,7 @@ def build_music():
             if t >= outro_start:
                 break
             sec = section(t)
-            if sec in ("hook", "bridge"):
+            if sec == "hook" or WALL_IN - 0.05 <= t < WALL_PICKS[0] - 0.02:
                 continue
             k = kick()
             add(drums, k, t, 0.6)
@@ -258,8 +309,15 @@ def build_music():
     add(music, bass(hz(end_root - 24), 2.5), outro_start, 0.35)
 
     music *= duck
+    talk = np.ones(N)
+    a, b = int((VOICE_AT - 0.1) * SR), int((VOICE_END + 0.15) * SR)
+    ramp = int(0.15 * SR)
+    talk[a:b] = 0.32
+    talk[a - ramp:a] = np.linspace(1, 0.32, ramp)
+    talk[b:b + ramp] = np.linspace(0.32, 1, ramp)
+    music *= talk
     riser = whoosh(1.0, 300, 7000, rising=True) * 0.12
-    add(music, riser, SCENES[3][1] - 1.0)
+    add(music, riser, scene_start("meeting") - 1.0)
     return music + drums
 
 
@@ -284,7 +342,9 @@ def main():
         sig, pan = make_sfx(kind)
         add(sfx, sig, t, 1.0, pan)
 
-    mix = reverb(music * 0.85, mix=0.22) + reverb(sfx, seconds=0.9, mix=0.12)
+    voice = np.zeros((2, N))
+    add(voice, load_voice(), VOICE_AT, 1.9)
+    mix = reverb(music * 0.85, mix=0.22) + reverb(sfx, seconds=0.9, mix=0.12) + reverb(voice, seconds=0.6, mix=0.05)
     fade = np.ones(N)
     tail = int(1.2 * SR)
     fade[-tail:] = np.linspace(1, 0, tail) ** 1.5

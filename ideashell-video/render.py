@@ -12,7 +12,7 @@ import sys
 from functools import lru_cache
 from multiprocessing import Pool
 
-from PIL import Image, ImageDraw, ImageFilter, ImageFont
+from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
 
 from timeline import *  # noqa: F403
 
@@ -344,12 +344,12 @@ def scene_hook(layer, t):
         (830, 1460, -5, "回头再整理吧"),
     ]
     for i, (x, y, rot, label) in enumerate(fragments):
-        p_in = prog(t, 0.05 + i * 0.12, 0.35)
-        fade = 1 - 0.75 * prog(t, 0.6 + i * 0.12, 1.4)
+        p_in = prog(t, 0.03 + i * 0.1, 0.3)
+        fade = 1 - 0.75 * prog(t, 0.45 + i * 0.1, 1.1)
         w = int(text_width(label, 36, "Medium")) + 56
         chip = rrect(w, 72, 36, WHITE + (255,), LINE + (255,), 2).copy()
         put(chip, txt(label, 36, "Medium", GRAY), w / 2, 36)
-        put(layer, chip, x, y - 60 * t, 0.9 + 0.1 * out_cubic(p_in), p_in * fade, rotate=rot)
+        put(layer, chip, x, y - 70 * t, 0.9 + 0.1 * out_cubic(p_in), p_in * fade, rotate=rot)
 
     lines = [
         ((("想法很多，", INK),), 0),
@@ -357,7 +357,7 @@ def scene_hook(layer, t):
         ((("", INK), ("想透", ORANGE), ("的更少。", INK)), 2),
     ]
     for segs, i in lines:
-        p = prog(t, HOOK_LINES[i], 0.32)
+        p = prog(t, HOOK_LINES[i], 0.28)
         if p <= 0:
             continue
         scale = lerp(1.35, 1.0, out_cubic(p))
@@ -374,103 +374,294 @@ def capture_layout(widths, gap, maxw, lh):
     return pos
 
 
+CAP_SIZE, CAP_LH, CAP_MAXW = 50, 74, 840
+CAP_TOP = 1065
+CAP_PAD = 104
+
+
+@lru_cache(1)
+def capture_geometry():
+    words = [w for w, _, _, _ in CAPTURE_TOKENS]
+    widths = [txt(w, CAP_SIZE).width for w in words]
+    messy = capture_layout(widths, 16, CAP_MAXW, CAP_LH)
+    keep = [i for i, (_, k, _, _) in enumerate(CAPTURE_TOKENS) if k == "n"]
+    clean_pos = capture_layout([widths[i] for i in keep], -4, CAP_MAXW, CAP_LH)
+    clean = dict(zip(keep, clean_pos))
+    clean_h = max(y for _, y in clean_pos) + CAP_LH
+    n_messy = sum(len(w.replace(" ", "")) for w in words)
+    n_clean = sum(len(words[i].replace(" ", "")) for i in keep)
+    fillers = [i for i, (_, k, _, _) in enumerate(CAPTURE_TOKENS) if k == "f"]
+    return words, widths, messy, clean, clean_h, n_messy, n_clean, fillers
+
+
+def label_chip(label, color, fill, size=30):
+    w = int(text_width(label, size)) + 40
+    chip = rrect(w, size + 26, (size + 26) // 2, fill + (255,)).copy()
+    put(chip, txt(label, size, "Bold", color), w / 2, (size + 26) / 2)
+    return chip
+
+
 def scene_capture(layer, t):
-    t0 = 2.5
+    t0 = scene_start("capture")
     a, s, dy = appear(t, t0 + 0.02)
-    put(layer, rich((("抬手就", INK), ("记", ORANGE)), 128, "Black"), 540, 262 + dy, s, a)
+    put(layer, rich((("抬手就", INK), ("记", ORANGE)), 128, "Black"), 540, 215 + dy, s, a)
     a, s, dy = appear(t, t0 + 0.12)
-    put(layer, txt("手表、手机、电脑，开口就能记", 44, "Medium", GRAY), 540, 392 + dy, s, a)
+    put(layer, txt("手表、手机、电脑，开口就能记", 44, "Medium", GRAY), 540, 345 + dy, s, a)
 
-    wa, ws, wdy = appear(t, t0 + 0.2, dur=0.55, rise=120, from_scale=0.8)
-    cx, cy = 540, 860
+    wa, ws, wdy = appear(t, t0 + 0.2, dur=0.55, rise=100, from_scale=0.8)
+    cx, cy = 540, 705
     if wa > 0:
+        talking = VOICE_AT <= t < VOICE_END
         for k in range(3):
-            phase = ((t - t0) / 1.5 + k / 3) % 1.0
-            r = int(lerp(180, 400, phase)) // 4 * 4
-            put(layer, ring(r, 4, ORANGE + (255,)), cx - 6, cy + 8 + wdy, 1.0, wa * 0.55 * (1 - phase) ** 1.5)
+            phase = ((t - t0) / (0.9 if talking else 1.5) + k / 3) % 1.0
+            r = int(lerp(170, 380, phase)) // 4 * 4
+            put(layer, ring(r, 4, ORANGE + (255,)), cx - 4, cy + 6 + wdy, 1.0, wa * 0.55 * (1 - phase) ** 1.5)
         breathe = 1 + 0.008 * math.sin((t - t0) * 6)
-        put(layer, asset_shadowed("watch-zh", 720), cx, cy + wdy, ws * breathe, wa)
+        put(layer, asset_shadowed("watch-zh", 560), cx, cy + wdy, ws * breathe, wa)
 
-    ca, cs, cdy = appear(t, CAPTURE_TYPE_START - 0.35, rise=60)
+    ca, cs, cdy = appear(t, VOICE_AT - 0.25, rise=60)
     if ca <= 0:
         return
-    card = Card(940, 300)
-    size, lh = 54, 80
-    widths = [txt(w, size).width for w in CAPTURE_WORDS]
-    messy = capture_layout(widths, 22, 840, lh)
-    keep = [i for i in range(len(CAPTURE_WORDS)) if i not in CAPTURE_FILLERS]
-    clean_tokens = []
-    for i in keep:
-        clean_tokens.append(i)
-        if CAPTURE_WORDS[i] == "的会":
-            clean_tokens.append("，")
-    clean_w = [widths[i] if isinstance(i, int) else txt(i, size).width for i in clean_tokens]
-    clean = dict(zip(map(str, clean_tokens), capture_layout(clean_w, -4, 860, lh)))
+    words, widths, messy, clean, clean_h, n_messy, n_clean, fillers = capture_geometry()
+    pc = in_out(prog(t, CAPTURE_COLLAPSE, 0.38))
+    pn = out_cubic(prog(t, CAPTURE_NOTE, 0.45))
+    pw = prog(t, CAPTURE_CORRECT, 0.2)
 
-    pm = prog(t, CAPTURE_MARK, 0.25)
-    pc = in_out(prog(t, CAPTURE_CLEAN, 0.45))
-    ox, oy = 50, 112
-    for i, word in enumerate(CAPTURE_WORDS):
-        ta = prog(t, CAPTURE_TYPE_START + i * CAPTURE_TYPE_STEP, 0.18)
+    shown_h = CAP_LH
+    for i, (x, y) in enumerate(messy):
+        ta = prog(t, CAPTURE_TOKEN_AT[i], 0.15)
+        if ta > 0:
+            shown_h = max(shown_h, y + CAP_LH * out_cubic(ta))
+    text_h = lerp(shown_h, clean_h, pc)
+    title_space = 84 * pn
+    extra = 170 * pn
+    card_h = int(CAP_PAD + title_space + text_h + 34 + extra) // 2 * 2
+    card = Card(940, card_h)
+    d, pad = card.draw()
+    ox, oy = 50, CAP_PAD + title_space
+
+    for i, (word, kind, _, _) in enumerate(CAPTURE_TOKENS):
+        ta = prog(t, CAPTURE_TOKEN_AT[i], 0.15)
         if ta <= 0:
             continue
         mx, my = messy[i]
+        w = widths[i]
         scale = lerp(0.6, 1.0, out_back(ta))
-        if i in CAPTURE_FILLERS:
-            alpha = 1 - pc
-            img = txt(word, size)
-            if pm > 0:
-                marked = rrect(widths[i] + 12, 74, 14, (255, 225, 225, 255)).copy()
-                put(marked, txt(word, size, "Bold", RED), marked.width / 2, 37)
-                ImageDraw.Draw(marked).line(
-                    (8, 40, 8 + (marked.width - 16) * pm, 40), fill=RED + (255,), width=5
-                )
-                card.add(img, ox + mx + widths[i] / 2, oy + my + 37, 0.5, 0.5, alpha * ta * (1 - pm), scale)
-                card.add(marked, ox + mx + widths[i] / 2, oy + my + 37, 0.5, 0.5, alpha, scale * (1 - 0.4 * pc))
-            else:
-                card.add(img, ox + mx + widths[i] / 2, oy + my + 37, 0.5, 0.5, ta, scale)
+        cxw, cyw = ox + mx + w / 2, oy + my + CAP_LH / 2
+        if kind == "f":
+            k = fillers.index(i)
+            pz = prog(t, CAPTURE_ZAPS[k], 0.24)
+            if pz <= 0:
+                card.add(txt(word, CAP_SIZE), cxw, cyw, 0.5, 0.5, ta, scale)
+                continue
+            marked = rrect(w + 14, 68, 14, (255, 222, 222, 255)).copy()
+            put(marked, txt(word, CAP_SIZE, "Bold", RED), marked.width / 2, 34)
+            card.add(marked, cxw, cyw, 0.5, 0.5, 1 - pz ** 1.4, 1 + 0.4 * out_cubic(pz))
+            for j in range(7):
+                ang = j * 2 * math.pi / 7 + k
+                r = 24 + 90 * out_cubic(pz)
+                card.add(circle(12 if j % 2 else 9, RED + (255,)), cxw + r * math.cos(ang), cyw + r * math.sin(ang),
+                         0.5, 0.5, (1 - pz) * clamp(pz * 8))
+        elif kind == "w":
+            gone = prog(t, CAPTURE_COLLAPSE - 0.05, 0.15)
+            card.add(txt(word, CAP_SIZE), cxw, cyw, 0.5, 0.5, ta * (1 - pw) * (1 - gone), scale)
+            card.add(txt(word, CAP_SIZE, "Bold", (175, 168, 158)), cxw, cyw, 0.5, 0.5, pw * (1 - gone))
+            if pw > 0 and gone < 1:
+                x0 = pad + ox + mx + 2
+                d.line((x0, pad + cyw + 2, x0 + (w - 8) * pw, pad + cyw + 2),
+                       fill=GRAY + (int(255 * (1 - gone)),), width=5)
         else:
-            nx, ny = clean[str(i)]
-            x = lerp(mx, nx, pc)
-            y = lerp(my, ny, pc)
-            card.add(txt(word, size), ox + x + widths[i] / 2, oy + y + 37, 0.5, 0.5, ta, scale)
-    if pc > 0:
-        nx, ny = clean["，"]
-        card.add(txt("，", size), ox + nx, oy + ny, alpha=pc)
+            nx, ny = clean[i]
+            x, y = lerp(mx, nx, pc), lerp(my, ny, pc)
+            px, py = ox + x + w / 2, oy + y + CAP_LH / 2
+            if word == "周五前":
+                flash = math.sin(math.pi * prog(t, CAPTURE_CORRECT + 0.12, 0.55))
+                card.add(rrect(w + 14, 68, 14, ORANGE_SOFT + (255,)), px, py, 0.5, 0.5, flash)
+                card.add(txt(word, CAP_SIZE, "Bold", ORANGE), px, py, 0.5, 0.5, flash)
+                card.add(txt(word, CAP_SIZE), px, py, 0.5, 0.5, ta * (1 - flash), scale)
+            else:
+                card.add(txt(word, CAP_SIZE), px, py, 0.5, 0.5, ta, scale)
 
-    pd = prog(t, CAPTURE_DONE, 0.3)
+    working = prog(t, ZAP_START, 0.15)
+    done = prog(t, CAPTURE_NOTE, 0.3)
     blink = 0.55 + 0.45 * abs(math.sin(t * 5))
-    card.add(circle(18, RED + (255,)), 50, 58, 0, 0.5, blink * (1 - pd))
-    card.add(txt("正在听…", 32, "Medium", GRAY), 80, 58, 0, 0.5, 1 - pd)
-    card.add(check_badge(34), 50, 58, 0, 0.5, pd, lerp(0.5, 1, out_back(pd)))
-    card.add(txt("口头禅已去掉，整理好了", 32, "Bold", ORANGE), 96, 58, 0, 0.5, pd)
-    bump = 1 + 0.035 * math.sin(math.pi * prog(t, CAPTURE_DONE, 0.3))
-    put(layer, card.img, 540, 1440 + cdy, cs * bump, ca)
+    card.add(circle(18, RED + (255,)), 50, 52, 0, 0.5, blink * (1 - working))
+    card.add(txt("正在听…", 32, "Medium", GRAY), 80, 52, 0, 0.5, 1 - working)
+    card.add(sparkle(30, ORANGE + (255,)), 50, 52, 0, 0.5, working * (1 - done))
+    card.add(txt("正在整理…", 32, "Bold", ORANGE), 92, 52, 0, 0.5, working * (1 - done))
+    card.add(check_badge(34), 50, 52, 0, 0.5, done, lerp(0.5, 1, out_back(done)))
+    card.add(txt("整理好了，已存成笔记", 32, "Bold", ORANGE), 96, 52, 0, 0.5, done)
+
+    events = CAPTURE_ZAPS + [CAPTURE_CORRECT]
+    n = sum(t >= e for e in events)
+    if working > 0:
+        last = max([e for e in events if t >= e], default=ZAP_START)
+        bump = 1 + 0.18 * math.sin(math.pi * prog(t, last, 0.16))
+        pk = prog(t, CAPTURE_COUNT, 0.25)
+        card.add(label_chip(f"已清理 {n} 处", RED, (255, 232, 232)), 890, 52, 1, 0.5, working * (1 - pk), bump)
+        card.add(label_chip(f"{n_messy} 字 → {n_clean} 字", ORANGE, ORANGE_SOFT), 890, 52, 1, 0.5, pk,
+                 lerp(0.6, 1, out_back(pk)))
+
+    if pn > 0:
+        card.add(txt("和 Allen 的会前准备", 48, "Black"), 50, CAP_PAD + 30 + 20 * (1 - pn), 0, 0.5, pn)
+        ty = oy + text_h + 40
+        for j, tag in enumerate(["#会议", "#Allen"]):
+            pt = out_back(prog(t, CAPTURE_NOTE + 0.1 + j * 0.1, 0.35))
+            if pt > 0:
+                card.add(label_chip(tag, ORANGE, ORANGE_SOFT), 50 + j * 140 + 60 * (1 - pt), ty, 0, 0.5, clamp(pt))
+        pt = prog(t, CAPTURE_NOTE + 0.3, 0.3)
+        if pt > 0:
+            card.add(rrect(40, 40, 10, WHITE + (255,), ORANGE + (255,), 4), 50, ty + 80, 0, 0.5, pt)
+            card.add(txt("周五前把报价发给 Allen", 34, "Medium"), 108, ty + 80, 0, 0.5, pt)
+
+    shake = 0.0
+    if t > CAPTURE_COLLAPSE + 0.3:
+        u = t - CAPTURE_COLLAPSE - 0.3
+        shake = 10 * math.sin(u * 75) * math.exp(-u * 10)
+    bump = 1 + 0.03 * math.sin(math.pi * prog(t, CAPTURE_NOTE, 0.3))
+    put(layer, card.img, 540 + shake, CAP_TOP - card.pad + cdy, cs * bump, ca, ay=0)
 
 
-def scene_bridge(layer, t):
-    a, s, _ = appear(t, BRIDGE_A, dur=0.3)
-    put(layer, txt("记下来，", 128, "Black"), 540, 840, lerp(1.3, 1, out_cubic(prog(t, BRIDGE_A, 0.3))), a)
-    p = prog(t, BRIDGE_B, 0.3)
-    if p > 0:
-        img = rich((("再和你一起", INK), ("想", ORANGE), ("。", INK)), 128, "Black")
-        put(layer, img, 540, 1010, lerp(1.3, 1, out_cubic(p)), clamp(p * 2.5))
-        u = out_cubic(prog(t, BRIDGE_B + 0.15, 0.3))
-        if u > 0:
-            ux = 540 + img.width / 2 - 128 * 1.5
-            ImageDraw.Draw(layer).rounded_rectangle(
-                (ux - 60 * u, 1098, ux + 60 * u, 1112), 7, fill=ORANGE + (255,)
-            )
+# ---------- the note wall ----------
+
+WALL_COLS, WALL_ROWS = 25, 40
+CELL_W, CELL_H, CELL_GAP = 120, 80, 12
+WALL_W = WALL_COLS * (CELL_W + CELL_GAP) + CELL_GAP
+WALL_H = WALL_ROWS * (CELL_H + CELL_GAP) + CELL_GAP
+VIEW_TOP, VIEW_W, VIEW_H = 690, 1080, 1010
+VIEW_CX, VIEW_CY = 540, VIEW_TOP + VIEW_H / 2
+WALL_SCALE_FROM, WALL_SCALE_TO = 1.6, 0.31
+
+WALL_TITLES = [
+    "去东京上野公园看樱花", "R-1 项目设计调研", "海外零售销售计划", "今天和客户聊了一小时",
+    "为什么优秀产品不断做减法", "AI 笔记的新方向", "这次旅行拍了很多照片", "最近发现专注力下降",
+    "复盘：三个以后必须坚持", "记录是为了不断思考", "周会纪要", "读书笔记：思考快与慢",
+    "新品定价的几种思路", "用户访谈 #12", "健身计划第 3 周", "竞品分析：输入法",
+    "周末菜单", "年度目标拆解", "团队分工调整", "灵感：语音转待办",
+    "播客摘录", "季度 OKR 草稿", "设计评审要点", "招聘 JD 修改",
+    "出差清单", "体验问题汇总", "一个关于记忆的想法", "客户反馈整理",
+    "早上散步时想到的", "直播脚本初稿", "数据看板需求", "给新同事的入职指南",
+]
+
+PICKS = [
+    ((5, 12), "Allen 首次会议纪要", "09/28 · 录音 42 分钟"),
+    ((19, 14), "Q3 合作报价单 v2", "10/08 · 文档"),
+    ((6, 27), "Allen：导出太慢了", "10/10 · 闪念"),
+    ((18, 26), "和 Allen 的会前准备", "今天 · 刚刚记下"),
+]
+
+
+def cell_center(c, r):
+    return (CELL_GAP + c * (CELL_W + CELL_GAP) + CELL_W / 2, CELL_GAP + r * (CELL_H + CELL_GAP) + CELL_H / 2)
+
+
+@lru_cache(1)
+def walls():
+    import random
+
+    rnd = random.Random(3)
+    wall = Image.new("RGBA", (WALL_W, WALL_H), (0, 0, 0, 0))
+    cell = rrect(CELL_W, CELL_H, 10, WHITE + (255,), LINE + (255,), 1)
+    d = ImageDraw.Draw(wall)
+    ft, fs = font("Bold", 13), font("Regular", 10)
+    pastel = [(255, 214, 196), (214, 226, 240), (222, 236, 214), (240, 226, 206), (232, 220, 240)]
+    for r in range(WALL_ROWS):
+        for c in range(WALL_COLS):
+            x, y = CELL_GAP + c * (CELL_W + CELL_GAP), CELL_GAP + r * (CELL_H + CELL_GAP)
+            wall.alpha_composite(cell, (x, y))
+            d.text((x + 10, y + 9), rnd.choice(WALL_TITLES)[:8], font=ft, fill=INK + (255,))
+            has_img = rnd.random() < 0.22
+            for k in range(2):
+                bw = rnd.randint(40, 62 if has_img else 96)
+                d.rounded_rectangle((x + 10, y + 34 + k * 13, x + 10 + bw, y + 40 + k * 13), 3, fill=(228, 223, 215, 255))
+            if has_img:
+                d.rounded_rectangle((x + 78, y + 32, x + 110, y + 60), 5, fill=rnd.choice(pastel) + (255,))
+            d.text((x + 10, y + 62), f"{rnd.randint(1, 12):02d}/{rnd.randint(1, 28):02d}", font=fs, fill=GRAY + (255,))
+    rgb = wall.convert("RGB")
+    dim = Image.blend(rgb, Image.new("RGB", wall.size, PAPER), 0.72).convert("RGBA")
+    dim.putalpha(wall.getchannel("A").point(lambda v: int(v * 0.8)))
+    flash = Image.blend(rgb, Image.new("RGB", wall.size, ORANGE), 0.5).convert("RGBA")
+    flash.putalpha(wall.getchannel("A"))
+    return wall, dim, flash
+
+
+@lru_cache(1)
+def vignette():
+    m = Image.new("L", (VIEW_W, VIEW_H), 0)
+    ImageDraw.Draw(m).rounded_rectangle((90, 70, VIEW_W - 90, VIEW_H - 70), 160, fill=255)
+    return m.filter(ImageFilter.GaussianBlur(70))
+
+
+@lru_cache(8)
+def wall_crop(which, scale):
+    src = walls()[which]
+    cw, ch = VIEW_W / scale, VIEW_H / scale
+    box = (round(WALL_W / 2 - cw / 2), round(WALL_H / 2 - ch / 2), round(WALL_W / 2 + cw / 2), round(WALL_H / 2 + ch / 2))
+    return src.crop(box).resize((VIEW_W, VIEW_H), Image.BILINEAR if scale > 0.5 else Image.BOX)
+
+
+def wall_scale(t):
+    z = in_out(prog(t, WALL_IN, WALL_ZOOM))
+    s = WALL_SCALE_FROM * (WALL_SCALE_TO / WALL_SCALE_FROM) ** z
+    return WALL_SCALE_TO if z >= 1 else round(s, 4)
+
+
+def wall_to_screen(pt, scale):
+    return VIEW_CX + (pt[0] - WALL_W / 2) * scale, VIEW_CY + (pt[1] - WALL_H / 2) * scale
+
+
+def draw_wall(layer, t):
+    alpha = prog(t, WALL_IN, 0.2) * (1 - prog(t, WALL_OUT, 0.35))
+    if alpha <= 0:
+        return
+    scale = wall_scale(t)
+    view = wall_crop(0, scale)
+    ps = prog(t, SCAN_START, SCAN_LEN)
+    if 0 < ps < 1:
+        r = lerp(40, 820, out_cubic(ps))
+        mask = Image.new("L", (VIEW_W, VIEW_H), 0)
+        cy = VIEW_H / 2
+        ImageDraw.Draw(mask).ellipse((540 - r, cy - r, 540 + r, cy + r), outline=int(255 * (1 - ps * 0.6)), width=110)
+        mask = mask.filter(ImageFilter.GaussianBlur(30))
+        view = Image.composite(wall_crop(2, scale), view, mask)
+    dp = prog(t, WALL_FILTER, 0.25)
+    if dp > 0:
+        view = Image.blend(view, wall_crop(1, scale), dp) if dp < 1 else wall_crop(1, scale)
+    a = ImageChops.multiply(view.getchannel("A"), vignette())
+    if alpha < 1:
+        a = a.point(lambda v: int(v * alpha))
+    view = view.copy()
+    view.putalpha(a)
+    layer.alpha_composite(view, (0, VIEW_TOP))
+    if 0 < ps < 1:
+        r = lerp(40, 820, out_cubic(ps)) // 4 * 4
+        put(layer, ring(int(r), 5, ORANGE + (255,)), VIEW_CX, VIEW_CY, 1.0, alpha * (1 - ps) * 0.9)
+
+
+@lru_cache(8)
+def pick_card(i):
+    _, title, meta = PICKS[i]
+    card = Card(455, 120, r=26, outline=ORANGE + (255,), width=3)
+    badge = circle(44, ORANGE + (255,)).copy()
+    put(badge, txt(str(i + 1), 26, "Black", WHITE), 22, 22)
+    card.add(badge, 26, 60, 0, 0.5)
+    card.add(txt(title, 30, "Bold"), 86, 44, 0, 0.5)
+    card.add(txt(meta, 24, "Regular", GRAY), 86, 84, 0, 0.5)
+    return card.img
+
+
+SLOTS = [(298, 1262), (782, 1262), (298, 1412), (782, 1412)]
+
+
+def ref_badge(n):
+    b = circle(36, ORANGE_SOFT + (255,)).copy()
+    put(b, txt(str(n), 22, "Black", ORANGE), 18, 18)
+    return b
 
 
 def scene_meeting(layer, t):
-    t0 = 8.5
-    header(layer, t, t0, "01", "会议", (("开会前，", INK), ("帮你备好功课", ORANGE)), MEETING_ASK, MEETING_STEPS[0])
-
-    pa = out_cubic(prog(t, t0 + 0.15, 0.6))
-    veil = prog(t, MEETING_STEPS[0] - 0.5, 0.4)
-    phone = asset_shadowed("phone-zh", 1120)
-    put(layer, phone, 540, lerp(1500, 1230, pa), 1.0, pa * (1 - veil))
+    t0 = M0
+    header(layer, t, t0, "01", "会议", (("开会前，", INK), ("帮你备好功课", ORANGE)), MEETING_ASK, SCAN_START)
 
     a, s, dy = appear(t, MEETING_ASK)
     if a > 0:
@@ -482,51 +673,66 @@ def scene_meeting(layer, t):
         put(img, txt(label, 42, "Bold", WHITE), pad + 92, pad + 56, ax=0)
         put(layer, img, 540, 616 + dy, s, a)
 
-    ca, cs, cdy = appear(t, MEETING_STEPS[0] - 0.55, rise=70)
-    if ca > 0:
-        card = Card(940, 450)
-        done_all = prog(t, MEETING_STEPS[-1] + 0.1, 0.2)
-        card.add(sparkle(40, ORANGE + (255,)), 52, 62, 0, 0.5)
-        card.add(txt("闪念贝壳正在想…", 40, "Bold"), 108, 62, 0, 0.5, 1 - done_all)
-        card.add(txt("想好了，关联到这些", 40, "Bold"), 108, 62, 0, 0.5, done_all)
-        rows = [
-            ("查看日程", "今天 15:00 · 产品评审会"),
-            ("了解联系人", "Allen · 合作方产品负责人"),
-            ("找到相关记忆", "3 条：上次纪要、报价单、需求清单"),
-        ]
-        for i, (title, detail) in enumerate(rows):
-            st = MEETING_STEPS[i]
-            ra = prog(t, st - 0.5, 0.25)
-            if ra <= 0:
-                continue
-            y = 122 + i * 112
-            done = prog(t, st, 0.22)
-            card.add(spinner(52, ORANGE + (255,)), 78, y + 44, 0.5, 0.5, ra * (1 - done), rotate=-t * 420)
-            card.add(check_badge(52), 78, y + 44, 0.5, 0.5, done, lerp(0.4, 1, out_back(done)))
-            card.add(txt(title, 40, "Bold", INK), 130, y + 22, 0, 0.5, ra)
-            card.add(txt(detail, 32, "Regular", GRAY), 130, y + 70, 0, 0.5, ra)
-        put(layer, card.img, 540, 941 + cdy, cs, ca)
+    draw_wall(layer, t)
 
-    ra, rs, rdy = appear(t, MEETING_RESULT, rise=70)
+    pa, ps_, pdy = appear(t, SCAN_START - 0.15, rise=30)
+    pill_alpha = pa * (1 - prog(t, WALL_OUT, 0.25))
+    if pill_alpha > 0:
+        found = prog(t, WALL_FILTER, 0.2)
+        n = int(1000 * out_cubic(prog(t, SCAN_START - 0.05, SCAN_LEN)))
+        w = 640
+        base, pad = card_base(w, 104, 52, WHITE, None, 0, (70, 45, 20), 0.22)
+        img = base.copy()
+        put(img, rich((("翻阅你记下的 ", INK), (f"{n:,}", ORANGE), (" 条笔记", INK)), 40, "Black"),
+            pad + w / 2, pad + 52, alpha=1 - found)
+        put(img, check_badge(44), pad + 120, pad + 52, alpha=found)
+        put(img, rich((("找到 ", INK), ("4", ORANGE), (" 条相关记忆", INK)), 40, "Black"), pad + 160, pad + 52,
+            ax=0, alpha=found)
+        bump = 1 + 0.06 * math.sin(math.pi * found)
+        put(layer, img, VIEW_CX, VIEW_CY + pdy, ps_ * bump, pill_alpha)
+
+    scale_now = wall_scale(t)
+    for i, (cell, _, _) in enumerate(PICKS):
+        pp = prog(t, WALL_PICKS[i], 0.35)
+        if pp <= 0:
+            continue
+        sx, sy = wall_to_screen(cell_center(*cell), scale_now)
+        pf = in_out(prog(t, WALL_FLY + i * 0.06, 0.45))
+        tx, ty = SLOTS[i]
+        x, y = lerp(sx, tx, pf), lerp(sy, ty, pf)
+        sc = lerp(lerp(CELL_W * WALL_SCALE_TO / 455, 0.62, out_back(pp)), 1.0, pf)
+        if pf < 1:
+            put(layer, glow(360, ORANGE, 0.5), x, y, sc * 1.4, clamp(pp * 3) * (1 - pf))
+        put(layer, pick_card(i), x, y, sc, clamp(pp * 3))
+
+    la = prog(t, WALL_FLY + 0.3, 0.3)
+    put(layer, txt("来源：你记下的 4 条笔记", 30, "Medium", GRAY), 540, 1150, 1.0, la)
+
+    ra, rs, rdy = appear(t, MEETING_RESULT, rise=60)
     if ra > 0:
-        card = Card(940, 320, outline=ORANGE + (255,), width=3)
+        card = Card(940, 330, outline=ORANGE + (255,), width=3)
         card.add(sparkle(40, ORANGE + (255,)), 52, 64, 0, 0.5)
         card.add(txt("会议准备卡", 44, "Black"), 108, 64, 0, 0.5)
+        card.add(txt("基于 4 条记忆", 28, "Medium", GRAY), 890, 64, 1, 0.5)
         items = [
-            ("上次遗留", "数据导出功能延期"),
-            ("本次重点", "Q3 合作排期"),
-            ("建议追问", "预算和对接人"),
+            ("上次遗留", "数据导出功能延期", [1, 3]),
+            ("本次重点", "Q3 合作排期与报价", [2]),
+            ("会前要做", "周五前把报价给他", [4]),
         ]
-        for i, (k, v) in enumerate(items):
-            ia = prog(t, MEETING_RESULT + 0.2 + i * 0.12, 0.25)
-            y = 140 + i * 60
+        for i, (k, v, refs) in enumerate(items):
+            ia = prog(t, MEETING_RESULT + 0.15 + i * 0.12, 0.25)
+            y = 150 + i * 62
             card.add(circle(14, ORANGE + (255,)), 58, y, 0.5, 0.5, ia)
-            card.add(rich(((k + "   ", GRAY), (v, INK)), 36, "Medium"), 84, y, 0, 0.5, ia)
-        put(layer, card.img, 540, 1370 + rdy, rs, ra)
+            line = rich(((k + "   ", GRAY), (v, INK)), 36, "Medium")
+            card.add(line, 84, y, 0, 0.5, ia)
+            for j, ref in enumerate(refs):
+                rp = out_back(prog(t, MEETING_RESULT + 0.35 + i * 0.12 + j * 0.06, 0.25))
+                card.add(ref_badge(ref), 84 + line.width + 14 + j * 44, y, 0, 0.5, clamp(rp), max(0.01, rp))
+        put(layer, card.img, 540, 736 - card.pad + rdy, rs, ra, ay=0)
 
 
 def scene_client(layer, t):
-    t0 = 14.0
+    t0 = C0
     header(layer, t, t0, "02", "客户对话", (("聊完客户，", INK), ("帮你找到机会", ORANGE)), CLIENT_CARD, CLIENT_HIGHLIGHT)
 
     pa = out_cubic(prog(t, t0 + 0.15, 0.6))
@@ -575,7 +781,7 @@ TODOS = [("把报价发给王总", "周五"), ("约设计评审", "下周一 10:
 
 
 def scene_todo(layer, t):
-    t0 = 19.5
+    t0 = T0
     header(layer, t, t0, "03", "待办", (("随口一说，", INK), ("变成待办", ORANGE)), TODO_SPEAK, TODO_SPLIT)
 
     wa, ws, wdy = appear(t, t0 + 0.15, rise=80)
@@ -667,7 +873,6 @@ def scene_outro(layer, t):
 SCENE_FN = {
     "hook": scene_hook,
     "capture": scene_capture,
-    "bridge": scene_bridge,
     "meeting": scene_meeting,
     "client": scene_client,
     "todo": scene_todo,
