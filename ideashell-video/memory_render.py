@@ -188,7 +188,7 @@ def draw_typing(layer, t):
 
 
 def fog(zr):
-    return clamp((7600 - zr) / 4200) ** 2.0
+    return clamp((4800 - zr) / 2800) ** 1.6
 
 
 def draw_tunnel(layer, t, alpha=1.0):
@@ -208,7 +208,7 @@ def draw_tunnel(layer, t, alpha=1.0):
     layer.alpha_composite(streaks)
     glow_done = False
     for i in order:
-        if not glow_done and zr[i] < 3600:
+        if not glow_done and zr[i] < 2600:
             put(layer, glow(1000, ORANGE, 0.6), CX, CY, 1.0, alpha * (0.6 + 0.4 * prog(t, FLIGHT_START, 1.0)))
             glow_done = True
         if zr[i] < 140 or w[i] < 5 or w[i] > 1100:
@@ -430,7 +430,10 @@ def lit_node(layer, x, y, p, label=None, side=1, alpha=1.0):
         chip = label_chip(label, ORANGE, WHITE, 32)
         chip = R.with_shadow(chip, blur=12, dy=6, opacity=0.18)[0]
         q = prog(p, 0.15, 0.85)
-        put(layer, chip, x + side * (40 + chip.width / 2 - 20), y, lerp(0.6, 1, out_back(q)), clamp(q * 2) * alpha)
+        off = 40 + chip.width / 2 - 20
+        if not (24 < x + side * off - chip.width / 2 and x + side * off + chip.width / 2 < W - 24):
+            side = -side
+        put(layer, chip, x + side * off, y, lerp(0.6, 1, out_back(q)), clamp(q * 2) * alpha)
 
 
 HOP_DIRS = [(-0.55, -0.45, -0.7), (0.6, -0.15, -0.78), (-0.4, 0.5, -0.76), (0.5, 0.45, -0.74)]
@@ -737,7 +740,7 @@ def draw_accordion(layer, t, alpha):
         else:
             z = 1000 + r * 520
             x, y = 540 + r * 560, 1010 - r * 260
-            a = clamp(1 + r / 1.3)
+            a = clamp(1 + r / 1.3) * (1 - settle)
         pages.append((z, i, x, y, a))
     for z, i, x, y, a in sorted(pages, reverse=True):
         w = int(600 * FOCAL / z * 1.0)
@@ -830,20 +833,23 @@ def draw_compare(layer, t, alpha):
         card.add(txt(name, 36, "Bold"), COL_X[0] + 28, y, 0, 0.5, ra)
         roll = out_cubic(prog(t, CMP_FILL + r * 0.3, 0.55))
         pv = int(price * roll / 100) * 100
+        price_s, days_s = f"¥{pv:,}", f"{int(days * roll)} 天"
         if r == 1 and best > 0:
-            card.add(rrect(206, 64, 14, ORANGE_SOFT + (255,)), COL_X[1] - 14, y, 0, 0.5, best)
-        card.add(txt(f"¥{pv:,}", 36, "Bold", ORANGE if (r == 1 and best > 0.5) else INK), COL_X[1], y, 0, 0.5, ra)
+            card.add(rrect(int(text_width(price_s, 36, "Bold")) + 28, 64, 14, ORANGE_SOFT + (255,)), COL_X[1] - 14,
+                     y, 0, 0.5, best)
+        card.add(txt(price_s, 36, "Bold", ORANGE if (r == 1 and best > 0.5) else INK), COL_X[1], y, 0, 0.5, ra)
         if r == 2 and fast > 0:
-            card.add(rrect(140, 64, 14, ORANGE_SOFT + (255,)), COL_X[2] - 14, y, 0, 0.5, fast)
-        card.add(txt(f"{int(days * roll)} 天", 36, "Bold", ORANGE if (r == 2 and fast > 0.5) else INK), COL_X[2], y, 0,
-                 0.5, ra)
+            card.add(rrect(int(text_width(days_s, 36, "Bold")) + 28, 64, 14, ORANGE_SOFT + (255,)), COL_X[2] - 14,
+                     y, 0, 0.5, fast)
+        card.add(txt(days_s, 36, "Bold", ORANGE if (r == 2 and fast > 0.5) else INK), COL_X[2], y, 0, 0.5, ra)
         card.add(txt(care, 36, "Bold"), COL_X[3], y, 0, 0.5, prog(t, CMP_FILL + r * 0.3 + 0.3, 0.2))
+        for label, col, val, tt in (("最低价", 1, price_s, CMP_BEST), ("交付最快", 2, days_s, CMP_BEST + 0.18)):
+            q = prog(t, tt, 0.3)
+            if r == col and q > 0:
+                chip = label_chip(label, WHITE, ORANGE, 20)
+                card.add(chip, COL_X[col] + text_width(val, 36, "Bold") + 22, y - 40, 1, 0.5, clamp(q * 2),
+                         lerp(0.5, 1, out_back(q)))
     put(layer, card.img, 540, 1085 + tdy, ts, ta * alpha)
-    for k, (label, x, y, tt) in enumerate([("最低价", 410, 1003, CMP_BEST), ("交付最快", 640, 1211, CMP_BEST + 0.18)]):
-        q = prog(t, tt, 0.3)
-        if q > 0:
-            chip = label_chip(label, WHITE, ORANGE, 24)
-            put(layer, chip, x, y, lerp(0.5, 1, out_back(q)), clamp(q * 2) * alpha * ta)
     a, s, dy = appear(t, CMP_SUMMARY, rise=20)
     put(layer, label_chip("综合 3 份不同格式的文件", ORANGE, ORANGE_SOFT, 32), 540, 1385 + dy, s, a * alpha)
 
