@@ -19,11 +19,16 @@
 
 运营人员不需要运行任何命令。
 
+第一次使用请看仓库里的
+[`references/operator-handbook.md`](references/operator-handbook.md)，里面有可以直接复制的下单、改分镜、提修改和验收话术。
+
 ## 安装
 
 - **Cursor：** 把目录复制到项目的 `.cursor/skills/product-motion-video/`。
 - **Claude Code / Opus：** 把目录复制到支持的 Skills 目录，或让 Agent 直接读取本目录的 `SKILL.md`。
 - **Grok 或其他 Agent：** 上传整个目录，要求先读 `SKILL.md`。
+
+注意：Agent 必须能读写文件并运行 Python、ffmpeg。只有文字聊天能力的普通聊天窗口不能独立导出 MP4。
 
 也可以生成一个便于上传的单文件包：
 
