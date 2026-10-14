@@ -15,7 +15,7 @@ Pick one hook per post and A/B the first two. Keep the on-screen text and captio
 
 **TikTok**
 
-> Forgot what the client said 11 months ago? It didn't. 🧠
+> Forgot what the client said 11 months ago? It didn't.
 >
 > Ask your notes, calls and files like you'd ask a coworker — and get the answer with the source.
 >
