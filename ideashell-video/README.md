@@ -1,3 +1,16 @@
+# 做一条新片子
+
+先读 `.cursor/skills/ideashell-video/SKILL.md`，里面有完整流程、硬规则和自检清单。培训讲义在 `docs/training/ideashell-video-workshop.md`。
+
+```bash
+python3 new_video.py todo_demo "随口一说，自动排好"   # 从 templates/ 生成四个文件
+./build_todo_demo.sh                                 # 先跑通一条 12 秒的示例片
+```
+
+每一帧最后都要经过 `render.xhs_safe()`，避开小红书的状态栏、返回 / 分享按钮和两侧裁切。
+
+---
+
 # 闪念贝壳 30 秒竖屏宣传片
 
 用代码生成的 1080×1920、30 fps、30 秒宣传片。画面是 Python + Pillow 逐帧绘制的 UI 动效，配乐和音效全部由 numpy 合成，最后用 ffmpeg 合成 MP4。成片在 `dist/ideashell-promo.mp4`。
