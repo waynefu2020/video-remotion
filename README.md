@@ -56,7 +56,13 @@ AI 第一次应该只给你创意和逐秒分镜，不应该马上开始做。�
 - 打开图片进行检查
 - 把生成的 MP4 交给你
 
-因此，带有代码执行环境的 Cursor Agent、Grok Agent 或 Opus 5.5 Agent 可以使用；只有文字聊天能力、不能运行命令的普通聊天窗口不能独立生成成片。
+推荐使用：
+
+1. **Cursor**：打开整个仓库，在 Agent 模式中使用。
+2. **Grok bot**：上传 `.skill` 文件或连接本仓库，在可执行代码的工作区中使用。
+3. **Claude 桌面端**：连接本地项目，并开启文件读写和命令执行能力后使用。
+
+其他 Agent 也可以，但必须具备上面的执行能力。只有文字聊天能力、不能运行命令的普通聊天窗口不能独立生成成片。
 
 ## 安装
 
@@ -71,17 +77,17 @@ AI 第一次应该只给你创意和逐秒分镜，不应该马上开始做。�
 
 本仓库已经在 `.cursor/skills/` 配好入口。用 Cursor 打开整个仓库，直接对 Agent 说“使用 product-motion-video Skill”即可。
 
-### Grok 或其他 Agent
+### Grok bot
 
-把 `product-motion-video.skill` 上传给具有文件读写和命令执行能力的 Agent，并说：
+把 `product-motion-video.skill` 上传给 Grok bot，在可执行代码的工作区中说：
 
 > 先读取这个 Skill。接下来严格按它的流程制作视频，在我确认分镜前不要开始渲染。
 
 如果平台不接受 `.skill` 文件，就上传整个 `product-motion-video/` 目录。
 
-### Claude / Opus
+### Claude 桌面端
 
-让 Agent 打开本仓库，或把 `product-motion-video/` 放到它支持的 Skills 目录。根目录的 `CLAUDE.md` 会把 Agent 指向同一份 Skill。
+让 Claude 桌面端连接本地项目，并确保它可以读写文件、运行 Python 和 ffmpeg。打开本仓库后，根目录的 `CLAUDE.md` 会把 Claude 指向同一份 Skill。
 
 ## Skill 里有什么
 
