@@ -4,27 +4,9 @@
 
 ## 1. 拿到视频文件
 
-**有链接时：** 先用仓库里的「镜析」读出作者、正文和互动数据。在仓库根目录运行 `npm run dev`，然后打开 <http://127.0.0.1:43123> 贴链接。
+只用用户已经给出的视频文件。用户发来的是链接、截图或分享文案时，请他们把视频文件发过来。不要抓取链接，不要摘作者、正文、点赞或评论。
 
-**要视频文件本身（小红书）：** 用 TikHub 接口。令牌在 `.env.local`，每次请求都计费，不要循环重试。
-
-```bash
-set -a && . ./.env.local && set +a
-curl -s -G "$TIKHUB_BASE_URL/api/v1/xiaohongshu/app_v2/search_notes" \
-  --data-urlencode "keyword=<笔记标题里的关键词>" \
-  -H "Authorization: Bearer $TIKHUB_TOKEN_XIAOHONGSHU" > /tmp/search.json
-```
-
-在返回结果里找到对应笔记。几个关键字段：
-
-- 原始尺寸：`video_info_v2.media.video.width` / `height`
-- 视频流地址：`video_info_v2.media.stream.h264[0]`（没有就用 `h265[0]`）里的 `master_url`
-
-```bash
-curl -L -o /tmp/ref.mp4 "<流地址>"
-```
-
-**用户直接发了视频文件时：** 跳过这一步。
+把文件放到 `/tmp/ref.mp4` 再继续。
 
 ## 2. 看规格
 

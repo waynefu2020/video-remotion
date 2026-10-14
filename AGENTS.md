@@ -1,8 +1,7 @@
 # 给 Agent 的说明
 
-本仓库有两块工作，互不混用。
+这个仓库只做竖屏产品动效短视频，比如「说话乱七八糟，日程井井有条」：方格逐字打出、口头禅标红吹走、收成待办和日程、品牌落版。
 
-- **镜析**（仓库根目录的 Next.js 应用）：读链接、拆公开视频。改这里时看根目录 `README.md`。
-- **竖屏动效视频**（`ideashell-video/`）：一律按 [ideashell-video/PLAYBOOK.md](ideashell-video/PLAYBOOK.md) 做。用户说「按公司的视频做法」也是指这份手册。手册不绑定 Cursor，Grok、Claude（Opus 5.5）和其他能跑命令的 Agent 用同一份。
+不解析链接，不拆文案，不读取点赞、评论或作者信息。
 
-做视频时先读完手册再动手。标了「停」的步骤要等用户确认。
+一律按 [ideashell-video/PLAYBOOK.md](ideashell-video/PLAYBOOK.md) 做。用户说「按公司的视频做法」也是指这份手册。标了「停」的步骤要等用户确认。
