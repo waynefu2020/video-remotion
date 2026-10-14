@@ -125,7 +125,7 @@ EN = dict(
     cmp_summary="Combined 3 files, 3 formats",
     ch2=("Upload any file.", (("Ask", ORANGE), (" anything.", INK))),
     brand="ideaShell",
-    slogan=[((("Remember", ORANGE), (" more.", INK)), 1180), ((("Think", ORANGE), (" better.", INK)), 1290)],
+    slogan=[((("You ", INK), ("Talk", ORANGE), (".", INK)), 1180), ((("It does the ", INK), ("rest", ORANGE), (".", INK)), 1290)],
     sub=("Every idea you capture gets a next step.", 1420),
 )
 

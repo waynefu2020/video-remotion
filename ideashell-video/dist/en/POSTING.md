@@ -35,7 +35,7 @@ Pick one hook per post and A/B the first two. Keep the on-screen text and captio
 **YouTube Shorts**
 
 - Title: `Your notes finally answer back #shorts`
-- Description: `Ask a question, get the answer with its source — across notes, call recordings, contracts and spreadsheets. ideaShell: remember more, think better.`
+- Description: `Ask a question, get the answer with its source — across notes, call recordings, contracts and spreadsheets. ideaShell: You Talk. It does the rest.`
 
 **X / LinkedIn (with the 3:4 cover or the video)**
 
@@ -44,7 +44,7 @@ Pick one hook per post and A/B the first two. Keep the on-screen text and captio
 > We built ideaShell so you can just ask: budgets from last year's call, the breach clause on page 47 of an
 > 86-page contract, which of three vendor quotes is cheapest.
 >
-> Remember more. Think better.
+> You Talk. It does the rest.
 
 ## Before you publish
 

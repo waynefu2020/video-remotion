@@ -97,7 +97,7 @@ VIDEO_LANG=en python3 memory_render.py --stills 4.3 9.9 26   # 英文静帧 -> o
 | 合同.pdf、汇报.pptx | Contract.pdf、Q3 Review.pptx | 海外常见文件命名 |
 | 第十二条 违约责任 | 12. Breach of Contract / force majeure | 英文合同条款写法 |
 | A / B / C 公司，¥，天 | Northwind / Brightline / Kestrel，$，days | 虚构但像真的供应商名 |
-| 闪念贝壳 · 帮你记，一起想。 | ideaShell · Remember more. Think better. | 英文品牌名和口号 |
+| 闪念贝壳 · 帮你记，一起想。 | ideaShell · You Talk. It does the rest. | 英文品牌名和口号 |
 
 海外版额外做了短视频平台安全区：所有内容缩到 84%、上移 30px，四边羽化，背景仍然满屏，避开 TikTok / Reels / Shorts 右侧点赞栏和底部文案区。文案表在 `memory_copy.py`，中文版输出逐像素不变。
 
