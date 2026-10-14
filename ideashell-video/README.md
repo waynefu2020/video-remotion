@@ -73,6 +73,34 @@ pip install pillow numpy
 - 画面：`memory_render.py`（复用 `render.py` 的绘图工具），静帧检查：`python3 memory_render.py --stills 2.6 9.8 26`
 - 配乐和音效：`memory_audio.py`（复用 `audio.py` 的乐器和音效）
 
+## 海外版（英文）
+
+同一条时间轴和音乐，画面文案按海外语境本地化，不是逐字翻译。成片、封面和发布文案在 `dist/en/`：
+
+- `ideashell-memory-en.mp4`：32 秒，1080×1920
+- `cover-en-9x16.png` 和 `cover-en-3x4.png`：两张封面
+- `POSTING.md`：TikTok / Reels / Shorts / X / LinkedIn 的标题、正文和话题标签
+
+```bash
+./build_memory_en.sh      # 自动下载 Inter 字体，VIDEO_LANG=en
+VIDEO_LANG=en python3 memory_render.py --stills 4.3 9.9 26   # 英文静帧 -> out/m-en-still-*.png
+```
+
+| 中文版 | 海外版 | 为什么这样改 |
+| --- | --- | --- |
+| 去年王总说的预算，是多少来着？ | What was Mark's budget again? | 海外职场直呼名字，不用「X 总」 |
+| 预算控制在 80 万以内 | Mark: Keep it under $120K | 美元、K 计数 |
+| 你忘了的，它都记得。 | You forgot. It remembers. | 短句更有冲击力 |
+| 2026.10 倒数月份 | Oct 2026 | 英文日期写法 |
+| 从 1,000 条笔记里找到答案 | 1,000 notes in. One answer out. | 对仗的英文标题句式 |
+| 小林生日 / 体检 / 《思考，快与慢》 | Lily's birthday / doctor's checkup / Kahneman | 海外熟悉的人名和书 |
+| 合同.pdf、汇报.pptx | Contract.pdf、Q3 Review.pptx | 海外常见文件命名 |
+| 第十二条 违约责任 | 12. Breach of Contract / force majeure | 英文合同条款写法 |
+| A / B / C 公司，¥，天 | Northwind / Brightline / Kestrel，$，days | 虚构但像真的供应商名 |
+| 闪念贝壳 · 帮你记，一起想。 | ideaShell · Remember more. Think better. | 英文品牌名和口号 |
+
+海外版额外做了短视频平台安全区：所有内容缩到 84%、上移 30px，四边羽化，背景仍然满屏，避开 TikTok / Reels / Shorts 右侧点赞栏和底部文案区。文案表在 `memory_copy.py`，中文版输出逐像素不变。
+
 ---
 
 # 闪念贝壳 28 秒「说话乱七八糟，日程井井有条」竖屏片

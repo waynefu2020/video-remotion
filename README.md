@@ -19,6 +19,7 @@
 | --- | --- | --- |
 | 说话乱七八糟，日程井井有条 | 混乱口语 → 待办 → 日历 | [`ideashell-schedule.mp4`](ideashell-video/dist/ideashell-schedule.mp4) |
 | 你忘了的，它都记得 | 问题 → 搜索记忆 → 带来源回答 | [`ideashell-memory.mp4`](ideashell-video/dist/ideashell-memory.mp4) |
+| You forgot. It remembers.（海外英文版） | 同一结构，场景和文案本地化，适配 TikTok / Reels / Shorts 安全区 | [`dist/en/`](ideashell-video/dist/en/) |
 | 帮你记，一起想 | 随口记录 → 回忆 → 行动 | [`ideashell-promo.mp4`](ideashell-video/dist/ideashell-promo.mp4) |
 
 ## 运营同事最快开始

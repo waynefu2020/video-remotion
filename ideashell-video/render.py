@@ -64,9 +64,15 @@ def appear(t, t0, dur=0.42, rise=46, from_scale=0.72):
 
 # ---------- drawing primitives ----------
 
+LATIN = os.environ.get("VIDEO_LANG", "zh") == "en"
+# Inter has a shorter ascender than Noto SC, so it needs a taller box to keep descenders.
+BOX_H, BASELINE = (1.0, 0.97) if LATIN else (0.86, 0.93)
+
+
 @lru_cache(64)
 def font(weight, size):
-    return ImageFont.truetype(os.path.join(FONT_DIR, f"NotoSansSC-{weight}.otf"), size)
+    name = f"Inter-{weight}.ttf" if LATIN else f"NotoSansSC-{weight}.otf"
+    return ImageFont.truetype(os.path.join(FONT_DIR, name), size)
 
 
 @lru_cache(4096)
@@ -74,11 +80,11 @@ def rich(segments, size, weight="Bold"):
     f = font(weight, size)
     asc, desc = f.getmetrics()
     width = sum(f.getlength(s) for s, _ in segments)
-    img = Image.new("RGBA", (math.ceil(width) + 4, int((asc + desc) * 0.86) + 4), (0, 0, 0, 0))
+    img = Image.new("RGBA", (math.ceil(width) + 4, int((asc + desc) * BOX_H) + 4), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
     x = 2
     for s, color in segments:
-        d.text((x, 2 + asc * 0.93), s, font=f, fill=color, anchor="ls")
+        d.text((x, 2 + asc * BASELINE), s, font=f, fill=color, anchor="ls")
         x += f.getlength(s)
     return img
 

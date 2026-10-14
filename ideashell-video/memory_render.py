@@ -1,4 +1,4 @@
-"""Render the 32s ideaShell memory video.
+"""Render the 32s ideaShell memory video. VIDEO_LANG=en renders the overseas cut (suffix -en).
 
     python3 memory_render.py                  # -> out/memory-video.mp4 (no audio)
     python3 memory_render.py --stills 2.4 8   # PNG stills -> out/m-still-*.png
@@ -22,8 +22,13 @@ from render import (Card, appear, asset, check_badge, check_icon, circle, clamp,
                     sparkle, text_width, txt)
 from timeline import GRAY, INK, LINE, ORANGE, ORANGE_SOFT, PAPER, RED, WHITE
 from memory_timeline import *  # noqa: F403
+from memory_copy import C, LANG
+
+FILES = [(label, name, color) for (label, _, color), name in zip(FILES, C["file_names"])]
+WALL_TITLES = C["wall_titles"] or R.WALL_TITLES
 
 OUT_DIR = R.OUT_DIR
+SUFFIX = "-en" if LANG == "en" else ""
 FOCAL = 900.0
 CX, CY = 540, 960
 EXIT = 0.28
@@ -105,7 +110,7 @@ def mini_card(v):
     w, h = 320, 210
     img = rrect(w, h, 24, WHITE + (255,), LINE + (255,), 2).copy()
     d = ImageDraw.Draw(img)
-    put(img, txt(R.WALL_TITLES[(v * 5) % len(R.WALL_TITLES)][:9], 30, "Bold"), 24, 44, ax=0)
+    put(img, txt(WALL_TITLES[(v * 5) % len(WALL_TITLES)][:C["wall_chars"]], 30, "Bold"), 24, 44, ax=0)
     has_img = v % 3 == 0
     for k in range(3):
         bw = rnd.randint(110, 170 if has_img else 260)
@@ -158,8 +163,8 @@ RIB_Z = 600 + np.arange(24) * 480.0
 RIB_R = 1000
 
 
-Q_LINES = ["去年王总说的预算，", "是多少来着？"]
-Q_SIZE, Q_YS = 96, (850, 985)
+Q_LINES = C["q_lines"]
+Q_SIZE, Q_YS = C["q_size"], C["q_ys"]
 
 
 @lru_cache(1)
@@ -278,7 +283,7 @@ def draw_particles(layer, t):
 
 def month_label(k):
     total = 2026 * 12 + 9 - k
-    return f"{total // 12}.{total % 12 + 1:02d}"
+    return C["month"](total // 12, total % 12 + 1)
 
 
 def draw_month_counter(layer, t):
@@ -295,7 +300,7 @@ def draw_month_counter(layer, t):
     x0, y0 = pad + 66, pad + 58
     for off in (0, 26):
         d.polygon([(x0 + off, y0 - 18), (x0 + off, y0 + 18), (x0 + off - 26, y0)], fill=ORANGE + (255,))
-    put(img, txt(month_label(k), 60, "Black"), pad + 250, y0)
+    put(img, txt(month_label(k), C["month_size"], "Black"), pad + 250, y0)
     tick = prog(t, max([FLIGHT_START + (FLIGHT_END - FLIGHT_START) * ((j + 1) / (MONTHS + 1)) ** 0.6
                          for j in range(k)] or [0]), 0.1)
     put(layer, img, 540, 300, 1 + 0.06 * math.sin(math.pi * tick), a)
@@ -305,12 +310,12 @@ def found_card(t):
     card = Card(920, 310, r=40)
     d, pad = card.draw()
     card.add(circle(18, RED + (255,)), 46, 56, 0, 0.5)
-    card.add(txt("客户会议录音 · 2025.11.12 · 第 23 分钟", 30, "Medium", GRAY), 78, 56, 0, 0.5)
-    lead = "王总："
+    card.add(txt(C["found_meta"], 30, "Medium", GRAY), 78, 56, 0, 0.5)
+    lead = C["found_lead"]
     lw = text_width(lead, 50, "Medium")
-    pre = "预算控制在 "
+    pre = C["found_pre"]
     pw = text_width(pre, 54, "Black")
-    key = "80 万"
+    key = C["found_key"]
     kw = text_width(key, 54, "Black")
     y = 150
     hp = in_out(prog(t, FOUND_MARK, 0.28))
@@ -318,7 +323,7 @@ def found_card(t):
         x0 = pad + 46 + lw + pw - 6
         d.rounded_rectangle((x0, pad + y - 34, x0 + (kw + 14) * hp, pad + y + 36), 10, fill=(255, 205, 178, 255))
     card.add(txt(lead, 50, "Medium", GRAY), 46, y, 0, 0.5)
-    card.add(rich(((pre, INK), (key, ORANGE if hp > 0.5 else INK), (" 以内", INK)), 54, "Black"), 46 + lw, y, 0, 0.5)
+    card.add(rich(((pre, INK), (key, ORANGE if hp > 0.5 else INK), (C["found_post"], INK)), 54, "Black"), 46 + lw, y, 0, 0.5)
     for k in range(40):
         amp = 0.25 + 0.75 * abs(math.sin(k * 0.9) * math.sin(k * 0.37 + 1))
         hh = 6 + 34 * amp
@@ -353,13 +358,10 @@ def scene_hook(layer, t):
             put(layer, ring(int(lerp(200, 620, out_cubic(land))) // 4 * 4, 6, ORANGE + (255,)), 540, 880, 1.0,
                 (1 - land) * 0.8)
         put(layer, found_card(t), 540 + sh, 880, FOCAL / z, clamp(p * 3))
-        for k, (tt, segs, y) in enumerate([
-            (SLAM_1, (("你忘了的，", INK),), 1290),
-            (SLAM_2, (("它都", INK), ("记得", ORANGE), ("。", INK)), 1425),
-        ]):
+        for tt, (segs, y) in zip((SLAM_1, SLAM_2), C["slams"]):
             q = prog(t, tt, 0.18)
             if q > 0:
-                put(layer, rich(segs, 108, "Black"), 540 + sh, y, lerp(1.7, 1.0, out_cubic(q)), clamp(q * 2.5))
+                put(layer, rich(segs, C["slam_size"], "Black"), 540 + sh, y, lerp(1.7, 1.0, out_cubic(q)), clamp(q * 2.5))
 
 
 # ====================== memory sphere ======================
@@ -463,13 +465,9 @@ def lit_node(layer, x, y, p, label=None, side=1, alpha=1.0):
 
 
 HOP_DIRS = [(-0.55, -0.45, -0.7), (0.6, -0.15, -0.78), (-0.4, 0.5, -0.76), (0.5, 0.45, -0.74)]
-HOP_LABELS = ["王总", "预算 80 万", "付款条款", "嫌交付慢"]
+HOP_LABELS = C["hop_labels"]
 
-RAPID_QA = [
-    ("去年读的那本书讲了什么？", "《思考，快与慢》：直觉快，推理慢", "3 条读书笔记 · 2025.08"),
-    ("上次体检医生让我注意啥？", "少熬夜，3 个月后复查血脂", "体检录音 · 2026.06"),
-    ("小林生日是哪天？", "11 月 26 日", "闲聊时提到 · 2025.04"),
-]
+RAPID_QA = C["rapid_qa"]
 
 
 @lru_cache(8)
@@ -510,9 +508,9 @@ def recall_card(t):
     d, pad = card.draw()
     card.add(sparkle(34, ORANGE + (255,)), 40, 54, 0, 0.5)
     card.add(sparkle(16, ORANGE + (255,)), 64, 38, 0, 0.5)
-    card.add(txt("回忆与行动", 34, "Bold"), 92, 54, 0, 0.5)
+    card.add(txt(C["recall_title"], 34, "Bold"), 92, 54, 0, 0.5)
     d.line((pad + 36, pad + 100, pad + 764, pad + 100), fill=LINE + (255,), width=2)
-    rows = [("glasses", "分析了 3 段关于“王总”的录音", True), ("glasses", "分析了 4 个记忆", True), ("check", "完成", False)]
+    rows = list(zip(("glasses", "glasses", "check"), C["recall_rows"], (True, True, False)))
     for i, (icon, text, chev) in enumerate(rows):
         p = prog(t, RECALL_ROWS[i], 0.25)
         if p <= 0:
@@ -532,8 +530,8 @@ def recall_card(t):
 def answer_card_1(t):
     card = Card(940, 300, outline=ORANGE + (255,), width=3)
     card.add(sparkle(40, ORANGE + (255,)), 50, 60, 0, 0.5)
-    card.add(txt("续约前要注意", 42, "Black"), 104, 60, 0, 0.5)
-    items = [("预算上限 80 万，报价别超", [1]), ("付款条款他上次有异议", [2]), ("他嫌交付慢，备好排期", [3, 4])]
+    card.add(txt(C["answer1_title"], 42, "Black"), 104, 60, 0, 0.5)
+    items = list(zip(C["answer1_items"], ([1], [2], [3, 4])))
     for i, (text, refs) in enumerate(items):
         ia = prog(t, ANSWER1 + 0.15 + i * 0.12, 0.25)
         y = 134 + i * 58
@@ -558,7 +556,7 @@ def rapid_card(k):
 
 
 def scene_recall(layer, t):
-    chapter(layer, t, CH1, "01", "从 1,000 条笔记里", rich((("找到", INK), ("答案", ORANGE)), 84, "Black"))
+    chapter(layer, t, CH1, "01", C["ch1"][0], rich(C["ch1"][1], 84, "Black"))
 
     form = in_out(prog(t, SPHERE_FORM, 0.7))
     cx, cy, sc = sphere_frame(t)
@@ -604,13 +602,13 @@ def scene_recall(layer, t):
         lit_node(layer, sx[n], sy[n], p, None, 1, 1 - prog(t, end - 0.05, 0.1))
 
     out1 = 1 - prog(t, RAPID[0] - 0.35, 0.25)
-    draw_bubble(layer, t, "下周和王总谈续约，我该注意什么？", ASK1, RAPID[0] - 0.35)
+    draw_bubble(layer, t, C["ask1"], ASK1, RAPID[0] - 0.35)
     a, s, dy = appear(t, RECALL_CARD, rise=60)
     put(layer, recall_card(t), 540, 1065 + dy, s, a * out1)
     a, s, dy = appear(t, ANSWER1, rise=60)
     put(layer, answer_card_1(t), 540, 1450 + dy, s, a * out1)
     a, s, dy = appear(t, SPAN_CHIP, rise=20)
-    put(layer, label_chip("跨越 11 个月 · 3 次会议 · 4 条记忆", ORANGE, ORANGE_SOFT, 30), 540, 1655 + dy, s, a * out1)
+    put(layer, label_chip(C["span_chip"], ORANGE, ORANGE_SOFT, 30), 540, 1655 + dy, s, a * out1)
 
     for k, (q, _, _) in enumerate(RAPID_QA):
         nxt = RAPID[k + 1] if k < 2 else None
@@ -696,9 +694,9 @@ def draw_absorb(layer, t, alpha):
     if ca > 0:
         last = max([ABSORB_START + i * ABSORB_STEP + 0.88 for i in range(absorbed)] or [0])
         b = 1 + 0.12 * math.sin(math.pi * prog(t, last, 0.16))
-        chip = label_chip(f"已读完 {absorbed} 份文件，全部变成你的记忆", ORANGE, ORANGE_SOFT, 34)
+        chip = label_chip(C["absorb_chip"].format(n=absorbed), ORANGE, ORANGE_SOFT, 34)
         put(layer, chip, 540, 1530 + cdy, cs * b, ca * alpha)
-        put(layer, txt("PDF · Word · PPT · Excel · 图片 · 录音 · 网页链接", 32, "Medium", GRAY), 540, 1615 + cdy, cs,
+        put(layer, txt(C["absorb_formats"], 32, "Medium", GRAY), 540, 1615 + cdy, cs,
             ca * alpha)
 
 
@@ -716,14 +714,14 @@ def page_base(v):
 
 
 PAGE_COUNT, TARGET_PAGE = 86, 47
-CLAUSE = ["12.1 任何一方违约，应向守约方支付", "合同总额 20% 的违约金。", "12.2 因不可抗力导致无法履约的，", "双方均不承担违约责任。"]
+CLAUSE = C["clause"]
 
 
 def page_img(i, t=None):
     if i == TARGET_PAGE - 1:
         img = rrect(600, 800, 20, WHITE + (255,), LINE + (255,), 2).copy()
         d = ImageDraw.Draw(img)
-        put(img, txt("第十二条  违约责任", 36, "Black"), 50, 90, ax=0)
+        put(img, txt(C["clause_heading"], 36, "Black"), 50, 90, ax=0)
         hp = in_out(prog(t, PAGE_MARK, 0.4)) if t is not None else 0
         for k, line in enumerate(CLAUSE):
             y = 168 + k * 50
@@ -749,7 +747,7 @@ def page_scaled(i, w):
 
 
 def draw_accordion(layer, t, alpha):
-    draw_bubble(layer, t, "合同里的违约条款怎么写的？", ACC_ASK)
+    draw_bubble(layer, t, C["acc_ask"], ACC_ASK)
     u = prog(t, RIFFLE_START, RIFFLE_END - RIFFLE_START)
     s = (TARGET_PAGE - 1) * (1 - (1 - u) ** 3.2)
     enter = out_cubic(prog(t, ACC_START - 0.25, 0.5))
@@ -782,23 +780,23 @@ def draw_accordion(layer, t, alpha):
     found = prog(t, RIFFLE_END, 0.2)
     ca = prog(t, RIFFLE_START - 0.1, 0.2) * alpha
     if ca > 0:
-        put(layer, label_chip(f"第 {n} 页", GRAY, WHITE, 32), 540, 432, 1.0, ca * (1 - found))
-        put(layer, label_chip(f"第 {TARGET_PAGE} 页 / 共 {PAGE_COUNT} 页", WHITE, ORANGE, 32), 540, 432,
+        put(layer, label_chip(C["page_chip"].format(n=n), GRAY, WHITE, 32), 540, 432, 1.0, ca * (1 - found))
+        put(layer, label_chip(C["page_found"].format(n=TARGET_PAGE, total=PAGE_COUNT), WHITE, ORANGE, 32), 540, 432,
             lerp(0.7, 1, out_back(found)), ca * found)
     a, sc, dy = appear(t, PAGE_ANSWER, rise=50)
     if a > 0:
         card = Card(940, 196)
         card.add(sparkle(36, ORANGE + (255,)), 48, 66, 0, 0.5)
-        card.add(txt("违约方需支付合同总额 20% 的违约金", 38, "Bold"), 100, 66, 0, 0.5)
+        card.add(txt(C["page_answer"], 38, "Bold"), 100, 66, 0, 0.5)
         badge = rrect(66, 36, 10, FILES[0][2] + (255,)).copy()
         put(badge, txt("PDF", 20, "Black", WHITE), 33, 18)
         card.add(badge, 100, 136, 0, 0.5)
-        card.add(txt("合同.pdf · 第 47 页", 30, "Regular", GRAY), 180, 136, 0, 0.5)
+        card.add(txt(C["page_src"], 30, "Regular", GRAY), 180, 136, 0, 0.5)
         put(layer, card.img, 540, 1530 + dy, sc, a * alpha)
 
 
-QUOTES = [("A 公司", 3, 128000, 45, "1 年"), ("B 公司", 0, 116500, 60, "2 年"), ("C 公司", 4, 121800, 30, "1 年")]
-QUOTE_FILES = [("A 公司报价", ".xlsx", 3), ("B 公司报价", ".pdf", 0), ("C 公司报价", ".jpg", 4)]
+QUOTES = C["quotes"]
+QUOTE_FILES = C["quote_files"]
 COL_X = [44, 300, 560, 790]
 
 
@@ -815,7 +813,7 @@ def quote_file_card(k):
 
 
 def draw_compare(layer, t, alpha):
-    draw_bubble(layer, t, "把三家的报价对比一下", CMP_ASK)
+    draw_bubble(layer, t, C["cmp_ask"], CMP_ASK)
     xs = [196, 540, 884]
     for k in range(3):
         a, s, dy = appear(t, CMP_FILES[k])
@@ -843,7 +841,7 @@ def draw_compare(layer, t, alpha):
         return
     card = Card(960, 470, r=40)
     d, pad = card.draw()
-    for j, h in enumerate(["供应商", "报价", "交付周期", "售后"]):
+    for j, h in enumerate(C["quote_headers"]):
         card.add(txt(h, 30, "Medium", GRAY), COL_X[j], 60, 0, 0.5)
     d.line((pad + 36, pad + 104, pad + 924, pad + 104), fill=LINE + (255,), width=2)
     best = prog(t, CMP_BEST, 0.25)
@@ -859,7 +857,7 @@ def draw_compare(layer, t, alpha):
         card.add(txt(name, 36, "Bold"), COL_X[0] + 28, y, 0, 0.5, ra)
         roll = out_cubic(prog(t, CMP_FILL + r * 0.3, 0.55))
         pv = int(price * roll / 100) * 100
-        price_s, days_s = f"¥{pv:,}", f"{int(days * roll)} 天"
+        price_s, days_s = C["price"](pv), C["days"](int(days * roll))
         if r == 1 and best > 0:
             card.add(rrect(int(text_width(price_s, 36, "Bold")) + 28, 64, 14, ORANGE_SOFT + (255,)), COL_X[1] - 14,
                      y, 0, 0.5, best)
@@ -869,7 +867,7 @@ def draw_compare(layer, t, alpha):
                      y, 0, 0.5, fast)
         card.add(txt(days_s, 36, "Bold", ORANGE if (r == 2 and fast > 0.5) else INK), COL_X[2], y, 0, 0.5, ra)
         card.add(txt(care, 36, "Bold"), COL_X[3], y, 0, 0.5, prog(t, CMP_FILL + r * 0.3 + 0.3, 0.2))
-        for label, col, val, tt in (("最低价", 1, price_s, CMP_BEST), ("交付最快", 2, days_s, CMP_BEST + 0.18)):
+        for label, col, val, tt in ((C["best_labels"][0], 1, price_s, CMP_BEST), (C["best_labels"][1], 2, days_s, CMP_BEST + 0.18)):
             q = prog(t, tt, 0.3)
             if r == col and q > 0:
                 chip = label_chip(label, WHITE, ORANGE, 20)
@@ -877,11 +875,11 @@ def draw_compare(layer, t, alpha):
                          lerp(0.5, 1, out_back(q)))
     put(layer, card.img, 540, 1085 + tdy, ts, ta * alpha)
     a, s, dy = appear(t, CMP_SUMMARY, rise=20)
-    put(layer, label_chip("综合 3 份不同格式的文件", ORANGE, ORANGE_SOFT, 32), 540, 1385 + dy, s, a * alpha)
+    put(layer, label_chip(C["cmp_summary"], ORANGE, ORANGE_SOFT, 32), 540, 1385 + dy, s, a * alpha)
 
 
 def scene_files(layer, t):
-    chapter(layer, t, CH2, "02", "上传的文件，", rich((("都能", INK), ("问", ORANGE)), 84, "Black"))
+    chapter(layer, t, CH2, "02", C["ch2"][0], rich(C["ch2"][1], 84, "Black"))
     if t < ACC_START:
         draw_absorb(layer, t, 1 - prog(t, ACC_START - 0.25, 0.25))
     if ACC_START - 0.25 <= t < CMP_START:
@@ -919,19 +917,43 @@ def scene_outro(layer, t):
         put(layer, glow(1000, ORANGE, 0.5), 540, LOGO_Y, lerp(0.4, 1.0, out_cubic(p)), lerp(1.0, 0.6, p))
         put(layer, asset("logo", height=300), 540, LOGO_Y, out_back(p, 1.6), clamp(p * 3))
     a, s, dy = appear(t, OUT_WORD)
-    put(layer, txt("闪念贝壳", 132, "Black"), 540, 1010 + dy, s, a)
-    a, s, dy = appear(t, OUT_SLOGAN)
-    put(layer, rich((("帮你", INK), ("记", ORANGE), ("，一起", INK), ("想", ORANGE), ("。", INK)), 92, "Black"),
-        540, 1215 + dy, s, a)
+    put(layer, txt(C["brand"], 132, "Black"), 540, 1010 + dy, s, a)
+    for k, (segs, y) in enumerate(C["slogan"]):
+        a, s, dy = appear(t, OUT_SLOGAN + k * 0.15)
+        put(layer, rich(segs, C["slogan_size"], "Black"), 540, y + dy, s, a)
     a, s, dy = appear(t, OUT_SUB)
-    put(layer, txt("让每一个被记下的想法，都有下一步", 42, "Medium", GRAY), 540, 1355 + dy, s, a)
+    put(layer, txt(C["sub"][0], 42, "Medium", GRAY), 540, C["sub"][1] + dy, s, a)
 
 
 SCENE_FN = {"hook": scene_hook, "recall": scene_recall, "files": scene_files, "outro": scene_outro}
 
 
+# TikTok / Reels / Shorts overlay a right-side action rail and a bottom caption block.
+SHORTS_SCALE, SHORTS_DY, FEATHER = 0.84, -30, 70
+
+
+@lru_cache(1)
+def feather_mask():
+    m = np.ones((H, W), np.float32)
+    ramp = np.clip(np.arange(FEATHER, dtype=np.float32) / FEATHER, 0, 1)
+    m[:FEATHER] *= ramp[:, None]
+    m[-FEATHER:] *= ramp[::-1, None]
+    m[:, :FEATHER] *= ramp[None, :]
+    m[:, -FEATHER:] *= ramp[None, ::-1]
+    return m
+
+
+def shorts_safe(frame, content):
+    a = np.array(content.getchannel("A"), np.float32) * feather_mask()
+    content.putalpha(Image.fromarray(a.astype(np.uint8)))
+    sw, sh = round(W * SHORTS_SCALE), round(H * SHORTS_SCALE)
+    frame.alpha_composite(content.resize((sw, sh), Image.LANCZOS), ((W - sw) // 2, (H - sh) // 2 + SHORTS_DY))
+    return frame
+
+
 def render(t):
     frame = R.background(t)
+    target = Image.new("RGBA", (W, H), (0, 0, 0, 0)) if LANG == "en" else frame
     for name, start, end in SCENES:
         last = name == SCENES[-1][0]
         if start <= t < end or (last and t >= start):
@@ -939,10 +961,12 @@ def render(t):
             SCENE_FN[name](layer, t)
             p = prog(t, end - EXIT, EXIT) if not last else 0
             if p > 0:
-                put(frame, layer, W / 2, H / 2 - 150 * in_cubic(p), 1.0, 1 - in_cubic(p))
+                put(target, layer, W / 2, H / 2 - 150 * in_cubic(p), 1.0, 1 - in_cubic(p))
             else:
-                frame.alpha_composite(layer)
+                target.alpha_composite(layer)
             break
+    if target is not frame:
+        shorts_safe(frame, target)
     return frame.convert("RGB")
 
 
@@ -958,12 +982,12 @@ def main():
     os.makedirs(OUT_DIR, exist_ok=True)
     if args.stills:
         for t in args.stills:
-            path = os.path.join(OUT_DIR, f"m-still-{t:05.2f}.png")
+            path = os.path.join(OUT_DIR, f"m{SUFFIX}-still-{t:05.2f}.png")
             render(t).save(path)
             print(path)
         return
     total = int(DURATION * FPS)
-    out = os.path.join(OUT_DIR, "memory-video.mp4")
+    out = os.path.join(OUT_DIR, f"memory-video{SUFFIX}.mp4")
     ff = subprocess.Popen(
         ["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}",
          "-r", str(FPS), "-i", "-", "-c:v", "libx264", "-preset", "medium", "-crf", "17",
