@@ -24,3 +24,7 @@ npm run dev
 可以贴完整链接，也可以贴整段分享文案。`Ctrl/⌘ + Enter` 直接拆。
 
 YouTube 和 X 的 TikHub 权限没开也能用。如果以后在后台勾上了这两个平台，把令牌写进 `TIKHUB_TOKEN_YOUTUBE` 和 `TIKHUB_TOKEN_X` 即可；当前读片仍以 GitHub 上的公开方案为准。
+
+## 竖屏动效视频
+
+`ideashell-video/` 用代码生成闪念贝壳的竖屏宣传片，说明见 `ideashell-video/README.md`。做新片子的流程整理成了 Cursor Skill，放在 `.cursor/skills/ideashell-video/`；内部培训讲义在 `docs/training/ideashell-video-workshop.md`。
