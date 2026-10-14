@@ -253,6 +253,22 @@ def put(dst, img, x, y, scale=1.0, alpha=1.0, ax=0.5, ay=0.5, rotate=0.0):
     dst.alpha_composite(img, (x + sx, y + sy))
 
 
+# ---------- xiaohongshu safe area ----------
+
+# Xiaohongshu shows 9:16 video under the status bar and back/share icons, and crops ~70px off each side.
+XHS_TOP, XHS_SCALE = 205, 0.86
+
+
+def xhs_safe(img, bg):
+    """Shrink a full-bleed layout around the center and push it below the top band."""
+    w, h = img.size
+    sw, sh = round(w * XHS_SCALE), round(h * XHS_SCALE)
+    out = Image.new("RGB", (w, h), bg)
+    out.paste(img.convert("RGB").resize((sw, sh), Image.LANCZOS).crop((0, 0, sw, min(sh, h - XHS_TOP))),
+              ((w - sw) // 2, XHS_TOP))
+    return out
+
+
 # ---------- background ----------
 
 GRID = 44

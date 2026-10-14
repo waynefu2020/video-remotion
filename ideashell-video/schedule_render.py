@@ -17,7 +17,7 @@ from PIL import Image, ImageDraw
 
 import render as R
 from render import (SS, appear, asset, check_badge, clamp, font, in_out, lerp, out_back, out_cubic, prog, put, rich,
-                    ring, rrect, text_width, txt, with_shadow)
+                    ring, rrect, text_width, txt, with_shadow, xhs_safe)
 from timeline import INK, ORANGE, ORANGE_SOFT, WHITE
 from schedule_timeline import *  # noqa: F403
 
@@ -787,12 +787,6 @@ def logo_tile():
 
 
 # ---------------------------------------------------------------- frame
-# Xiaohongshu draws 9:16 videos under the status bar and back/share icons; keep content clear of the top band.
-# Its side crop also eats ~70px per edge, so the whole layout is scaled down around the center.
-SAFE_TOP = 205
-SAFE_SCALE = 0.86
-
-
 def render(t):
     img = Image.new("RGBA", (W, H), PAPER + (255,))
     head_a = 1 - prog(t, CAL_OUT, 0.3)
@@ -815,11 +809,7 @@ def render(t):
     if t >= TYPE3[0] - 0.2:
         draw_slogan(img, t)
         draw_end(img, t)
-    sw, sh = round(W * SAFE_SCALE), round(H * SAFE_SCALE)
-    framed = Image.new("RGB", (W, H), PAPER)
-    framed.paste(img.convert("RGB").resize((sw, sh), Image.LANCZOS).crop((0, 0, sw, H - SAFE_TOP)),
-                 ((W - sw) // 2, SAFE_TOP))
-    return framed
+    return xhs_safe(img, PAPER)
 
 
 def render_frame(i):
