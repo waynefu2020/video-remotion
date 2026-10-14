@@ -27,4 +27,4 @@ YouTube 和 X 的 TikHub 权限没开也能用。如果以后在后台勾上了�
 
 ## 竖屏动效视频
 
-`ideashell-video/` 用代码生成闪念贝壳的竖屏宣传片，说明见 `ideashell-video/README.md`。做新片子的流程整理成了 Cursor Skill，放在 `.cursor/skills/ideashell-video/`；内部培训讲义在 `docs/training/ideashell-video-workshop.md`。
+`ideashell-video/` 用代码生成闪念贝壳的竖屏宣传片，说明见 `ideashell-video/README.md`。做新片子按 `ideashell-video/PLAYBOOK.md`，Cursor、Grok 和带 Opus 5.5 的 Agent 用同一份。内部培训讲义在 `docs/training/ideashell-video-workshop.md`。

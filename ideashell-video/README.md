@@ -1,6 +1,6 @@
 # 做一条新片子
 
-先读 `.cursor/skills/ideashell-video/SKILL.md`，里面有完整流程、硬规则和自检清单。培训讲义在 `docs/training/ideashell-video-workshop.md`。
+做新片子按 [PLAYBOOK.md](PLAYBOOK.md)。这份手册不绑定 Cursor，Grok、Claude（Opus 5.5）和其他能跑命令的 Agent 用的是同一份。培训讲义在 `docs/training/ideashell-video-workshop.md`。
 
 ```bash
 python3 new_video.py todo_demo "随口一说，自动排好"   # 从 templates/ 生成四个文件
